@@ -55,6 +55,12 @@ class arb: public detail::base_arb<>
         {
             static const bool value = std::is_same<T,float>::value || std::is_same<T,double>::value;
         };
+        // Interoperable types.
+        template <typename T>
+        struct is_interoperable
+        {
+            static const bool value = is_arb_int<T>::value || is_arb_uint<T>::value || is_arb_float<T>::value;
+        };
         // Custom is_digit checker.
         static bool is_digit(char c)
         {
@@ -62,7 +68,7 @@ class arb: public detail::base_arb<>
             return std::find(digits,digits + 10,c) != (digits + 10);
         }
         // Smart pointer to handle the string output from mpfr.
-        using smart_mpfr_str = std::unique_ptr<char,void (*)(char *)>;
+        typedef std::unique_ptr<char,void (*)(char *)> smart_mpfr_str;
         // Utility function to print an fmpr to stream using mpfr. Will clear f on exit.
         static void print_fmpr(std::ostream &os, ::fmpr_t f, long prec)
         {
@@ -113,6 +119,26 @@ class arb: public detail::base_arb<>
             ::mag_get_fmpr(f,m);
             print_fmpr(os,f,prec);
         }
+        // Generic constructor.
+        template <typename T, typename std::enable_if<is_arb_int<T>::value,int>::type = 0>
+        void construct(const T &n)
+        {
+            ::arb_set_si(&m_arb,static_cast<long>(n));
+        }
+        template <typename T, typename std::enable_if<is_arb_uint<T>::value,int>::type = 0>
+        void construct(const T &n)
+        {
+            ::arb_set_ui(&m_arb,static_cast<unsigned long>(n));
+        }
+        template <typename T, typename std::enable_if<is_arb_float<T>::value,int>::type = 0>
+        void construct(const T &x)
+        {
+            ::arf_t tmp_arf;
+            ::arf_init_set_ui(tmp_arf,0u);
+            ::arf_set_d(tmp_arf,static_cast<double>(x));
+            ::arb_set_arf(&m_arb,tmp_arf);
+            ::arf_clear(tmp_arf);
+        }
     public:
         arb() noexcept : m_prec(detail::base_arb<>::default_prec)
         {
@@ -128,24 +154,29 @@ class arb: public detail::base_arb<>
             ::arb_init(&m_arb);
             ::arb_swap(&m_arb,&other.m_arb);
         }
-        template <typename T, typename std::enable_if<is_arb_int<T>::value,int>::type = 0>
-        explicit arb(T n) noexcept : arb()
+        template <typename T, typename std::enable_if<is_interoperable<T>::value,int>::type = 0>
+        explicit arb(T x) noexcept : m_prec(detail::base_arb<>::default_prec)
         {
-            ::arb_set_si(&m_arb,static_cast<long>(n));
+            ::arb_init(&m_arb);
+            construct(x);
         }
-        template <typename T, typename std::enable_if<is_arb_uint<T>::value,int>::type = 0>
-        explicit arb(T n) noexcept : arb()
+        ~arb()
         {
-            ::arb_set_ui(&m_arb,static_cast<unsigned long>(n));
+            ::arb_clear(&m_arb);
         }
-        template <typename T, typename std::enable_if<is_arb_float<T>::value,int>::type = 0>
-        explicit arb(T x) noexcept : arb()
+        arb &operator=(const arb &other)
         {
-            ::arf_t tmp_arf;
-            ::arf_init_set_ui(tmp_arf,0u);
-            ::arf_set_d(tmp_arf,static_cast<double>(x));
-            ::arb_set_arf(&m_arb,tmp_arf);
-            ::arf_clear(tmp_arf);
+            if (this == &other) {
+                return *this;
+            }
+            ::arb_set(&m_arb,other);
+            m_prec = other.m_prec;
+            return *this;
+        }
+        arb &operator=(arb &&other) noexcept
+        {
+            swap(other);
+            return *this;
         }
         void add_error(double err) noexcept
         {
@@ -154,10 +185,6 @@ class arb: public detail::base_arb<>
             ::arf_set_d(tmp_arf,err);
             ::arb_add_error_arf(&m_arb,tmp_arf);
             ::arf_clear(tmp_arf);
-        }
-        ~arb()
-        {
-            ::arb_clear(&m_arb);
         }
         void set_precision(long prec)
         {
@@ -185,6 +212,14 @@ class arb: public detail::base_arb<>
             ::arb_cos(&retval.m_arb,*this,m_prec);
             return retval;
         }
+        void swap(arb &other) noexcept
+        {
+            if (this == &other) {
+                return;
+            }
+            ::arb_swap(&m_arb,&other.m_arb);
+            std::swap(m_prec,other.m_prec);
+        }
         operator const ::arb_struct *() const noexcept
         {
             return &m_arb;
@@ -200,9 +235,14 @@ class arb: public detail::base_arb<>
             os << ']';
             return os;
         }
+        // Free friend functions, to be used with ADL.
         friend arb cos(const arb &a)
         {
             return a.cos();
+        }
+        friend void swap(arb &a0, arb &a1)
+        {
+            a0.swap(a1);
         }
     private:
         ::arb_struct    m_arb;
