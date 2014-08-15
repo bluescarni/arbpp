@@ -181,6 +181,7 @@ class arb: public detail::base_arb<>
         arb cos() const
         {
             arb retval;
+            retval.m_prec = m_prec;
             ::arb_cos(&retval.m_arb,*this,m_prec);
             return retval;
         }
