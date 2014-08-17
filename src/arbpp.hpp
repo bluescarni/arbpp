@@ -36,7 +36,6 @@ const long base_arb<T>::default_prec;
 
 // A few forward declarations.
 class arb;
-
 arb operator+(const arb &, const arb &);
 std::ostream &operator<<(std::ostream &, const arb &);
 
@@ -44,13 +43,15 @@ std::ostream &operator<<(std::ostream &, const arb &);
 /**
  * \section interop Interoperability with fundamental types
  * 
- * Full interoperability with all integral and floating-point C++ types is provided.
+ * Interoperability with the following types is provided:
+ * - <tt>signed char</tt>, \p short, \p int, \p long and unsigned counterparts,
+ * - \p char,
+ * - \p float and \p double.
  * 
- * Every function interacting with floating-point types will check that the floating-point values are not
- * non-finite: in case of infinities or NaNs, an <tt>std::invalid_argument</tt> exception will be thrown.
- * It should be noted that interoperability with floating-point types is provided for convenience, and it should
- * not be relied upon in case exact results are required (e.g., the conversion of a large integer to a floating-point value
- * might not be exact).
+ * \section move_semantics Move semantics
+ *
+ * Move construction and move assignment will leave the moved-from object in an
+ * unspecified but valid state.
  */
 class arb: public detail::base_arb<>
 {
@@ -165,6 +166,9 @@ class arb: public detail::base_arb<>
         }
     public:
         /// Default constructor.
+        /**
+         * The value is initialised with both midpoint and radius equal to zero.
+         */
         arb() noexcept : m_prec(detail::base_arb<>::default_prec)
         {
             ::arb_init(&m_arb);
@@ -178,6 +182,10 @@ class arb: public detail::base_arb<>
             ::arb_init(&m_arb);
             ::arb_set(&m_arb,other);
         }
+        /// Move constructor.
+        /**
+         * @param[in] other construction argument.
+         */
         arb(arb &&other) noexcept : m_prec(other.m_prec)
         {
             ::arb_init(&m_arb);
@@ -186,7 +194,10 @@ class arb: public detail::base_arb<>
         /// Generic constructor.
         /**
          * \note
-         * This oprewo
+         * This constructor is enabled only if \p T is an \ref interop "interoperable type".
+         * 
+         * Construction from an interoperable type is always exact. The internal precision
+         * of the object will be set to the default value.
          * 
          * @param[in] x construction argument.
          */
@@ -201,8 +212,13 @@ class arb: public detail::base_arb<>
         {
             ::arb_clear(&m_arb);
         }
-        /// Copy assignment operator.
-        arb &operator=(const arb &other)
+        /// Copy assignment.
+        /**
+         * @param[in] other assignment argument.
+         * 
+         * @return reference to \p this.
+         */
+        arb &operator=(const arb &other) noexcept
         {
             if (this == &other) {
                 return *this;
@@ -211,15 +227,29 @@ class arb: public detail::base_arb<>
             m_prec = other.m_prec;
             return *this;
         }
+        /// Move assignment.
+        /**
+         * @param[in] other assignment argument.
+         * 
+         * @return reference to \p this.
+         */
         arb &operator=(arb &&other) noexcept
         {
             swap(other);
             return *this;
         }
+        /// Add error.
+        /**
+         * Add \p err to the radius.
+         * 
+         * @param[in] err error value.
+         * 
+         * @throws std::invalid_argument if \p err is negative or NaN.
+         */
         void add_error(double err)
         {
-            if (err < 0. || !std::isfinite(err)) {
-                throw std::invalid_argument("an error value must be non-negative and finite");
+            if (err < 0. || std::isnan(err)) {
+                throw std::invalid_argument("an error value must be non-negative and not NaN");
             }
             ::arf_t tmp_arf;
             ::arf_init_set_ui(tmp_arf,0u);
@@ -227,6 +257,15 @@ class arb: public detail::base_arb<>
             ::arb_add_error_arf(&m_arb,tmp_arf);
             ::arf_clear(tmp_arf);
         }
+        /// Precision setter.
+        /**
+         * Set the precision of \p this to \p prec bits.
+         * 
+         * @param[in] prec desired value for the precision.
+         * 
+         * @throws std::invalid_argument if \p prec is not positive or not within
+         * an implementation-defined range.
+         */
         void set_precision(long prec)
         {
             // NOTE: this precision is to be used within mpfr routines as well, so check that
@@ -238,11 +277,19 @@ class arb: public detail::base_arb<>
             }
             m_prec = prec;
         }
+        /// Precision getter.
+        /**
+         * @return precision associated to \p this.
+         */
         long get_precision() const noexcept
         {
             return m_prec;
         }
-        arb cos() const
+        /// Cosine.
+        /**
+         * @return the cosine of \p this.
+         */
+        arb cos() const noexcept
         {
             arb retval;
             retval.m_prec = m_prec;
