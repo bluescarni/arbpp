@@ -95,11 +95,19 @@ class arb: public detail::base_arb<>
         {
             static const bool value = is_arb_int<T>::value || is_arb_uint<T>::value || is_arb_float<T>::value;
         };
-        // Type valid for arithmetic operations.
+        // Type valid for unary arithmetic operations.
         template <typename T>
-        struct is_arithmetic_type
+        struct is_unary_arithmetic_type
         {
             static const bool value = is_interoperable<T>::value || std::is_same<T,arb>::value;
+        };
+        // Type valid for binary arithmetic operations.
+        template <typename T, typename U>
+        struct are_binary_arithmetic_types
+        {
+            static const bool value = (std::is_same<T,arb>::value && is_interoperable<U>::value) ||
+                (std::is_same<U,arb>::value && is_interoperable<T>::value) ||
+                (std::is_same<T,arb>::value && std::is_same<U,arb>::value);
         };
         // Custom is_digit checker.
         static bool is_digit(char c)
@@ -202,7 +210,7 @@ class arb: public detail::base_arb<>
             ::arf_set_d(&tmp_arf.m_arf,static_cast<double>(x));
             ::arb_add_arf(&m_arb,&m_arb,&tmp_arf.m_arf,m_prec);
         }
-        static arb binary_plus(const arb &a, const arb &b)
+        static arb binary_add(const arb &a, const arb &b)
         {
             const long prec = std::max<long>(a.m_prec,b.m_prec);
             arb retval;
@@ -211,7 +219,7 @@ class arb: public detail::base_arb<>
             return retval;
         }
         template <typename T, typename std::enable_if<is_arb_int<T>::value,int>::type = 0>
-        static arb binary_plus(const arb &a, const T &n)
+        static arb binary_add(const arb &a, const T &n)
         {
             arb retval;
             ::arb_add_si(&retval.m_arb,&a.m_arb,static_cast<long>(n),a.m_prec);
@@ -219,12 +227,12 @@ class arb: public detail::base_arb<>
             return retval;
         }
         template <typename T, typename std::enable_if<is_arb_int<T>::value,int>::type = 0>
-        static arb binary_plus(const T &n, const arb &a)
+        static arb binary_add(const T &n, const arb &a)
         {
-            return binary_plus(a,n);
+            return binary_add(a,n);
         }
         template <typename T, typename std::enable_if<is_arb_uint<T>::value,int>::type = 0>
-        static arb binary_plus(const arb &a, const T &n)
+        static arb binary_add(const arb &a, const T &n)
         {
             arb retval;
             ::arb_add_ui(&retval.m_arb,&a.m_arb,static_cast<unsigned long>(n),a.m_prec);
@@ -232,12 +240,12 @@ class arb: public detail::base_arb<>
             return retval;
         }
         template <typename T, typename std::enable_if<is_arb_uint<T>::value,int>::type = 0>
-        static arb binary_plus(const T &n, const arb &a)
+        static arb binary_add(const T &n, const arb &a)
         {
-            return binary_plus(a,n);
+            return binary_add(a,n);
         }
         template <typename T, typename std::enable_if<is_arb_float<T>::value,int>::type = 0>
-        static arb binary_plus(const arb &a, const T &x)
+        static arb binary_add(const arb &a, const T &x)
         {
             arb retval;
             arf_raii tmp_arf;
@@ -247,9 +255,9 @@ class arb: public detail::base_arb<>
             return retval;
         }
         template <typename T, typename std::enable_if<is_arb_float<T>::value,int>::type = 0>
-        static arb binary_plus(const T &x, const arb &a)
+        static arb binary_add(const T &x, const arb &a)
         {
-            return binary_plus(a,x);
+            return binary_add(a,x);
         }
     public:
         /// Default constructor.
@@ -440,7 +448,7 @@ class arb: public detail::base_arb<>
          * 
          * @return reference to \p this.
          */
-        template <typename T, typename std::enable_if<is_arithmetic_type<T>::value,int>::type = 0>
+        template <typename T, typename std::enable_if<is_unary_arithmetic_type<T>::value,int>::type = 0>
         arb &operator+=(const T &x) noexcept
         {
             in_place_add(x);
@@ -453,10 +461,10 @@ class arb: public detail::base_arb<>
          * 
          * @return <tt>a+b</tt>.
          */
-        template <typename T, typename U>
-        friend auto operator+(const T &a, const U &b) noexcept -> decltype(arb::binary_plus(a,b))
+        template <typename T, typename U, typename std::enable_if<are_binary_arithmetic_types<T,U>::value,int>::type = 0>
+        friend arb operator+(const T &a, const U &b) noexcept
         {
-            return binary_plus(a,b);
+            return binary_add(a,b);
         }
         /// Cosine.
         /**
