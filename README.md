@@ -1,4 +1,4 @@
 arbpp
 =====
 
-A C++ interface for the arb library.
+A C++ interface for the Arb library.

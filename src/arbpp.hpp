@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <arb.h>
 #include <arf.h>
+#include <cmath>
 #include <fmpr.h>
 #include <iostream>
 #include <limits>
@@ -13,16 +14,18 @@
 #include <string>
 #include <type_traits>
 
+/// Root Arbpp namespace.
 namespace arbpp
 {
 
+/// Namespace for implementation details.
 namespace detail
 {
 
 template <typename = void>
 struct base_arb
 {
-    // Default precision, in bits.
+    /// Default precision, in bits.
     static const long default_prec = 53;
 };
 
@@ -31,8 +34,29 @@ const long base_arb<T>::default_prec;
 
 }
 
+// A few forward declarations.
+class arb;
+
+arb operator+(const arb &, const arb &);
+std::ostream &operator<<(std::ostream &, const arb &);
+
+/// Real number represented as a floating-point ball.
+/**
+ * \section interop Interoperability with fundamental types
+ * 
+ * Full interoperability with all integral and floating-point C++ types is provided.
+ * 
+ * Every function interacting with floating-point types will check that the floating-point values are not
+ * non-finite: in case of infinities or NaNs, an <tt>std::invalid_argument</tt> exception will be thrown.
+ * It should be noted that interoperability with floating-point types is provided for convenience, and it should
+ * not be relied upon in case exact results are required (e.g., the conversion of a large integer to a floating-point value
+ * might not be exact).
+ */
 class arb: public detail::base_arb<>
 {
+        // Friends.
+        friend arb operator+(const arb &, const arb &);
+        friend std::ostream &operator<<(std::ostream &, const arb &);
         // Signed integers with which arb can interoperate.
         template <typename T>
         struct is_arb_int
@@ -140,10 +164,15 @@ class arb: public detail::base_arb<>
             ::arf_clear(tmp_arf);
         }
     public:
+        /// Default constructor.
         arb() noexcept : m_prec(detail::base_arb<>::default_prec)
         {
             ::arb_init(&m_arb);
         }
+        /// Copy constructor.
+        /**
+         * @param[in] other construction argument.
+         */
         arb(const arb &other) noexcept : m_prec(other.m_prec)
         {
             ::arb_init(&m_arb);
@@ -154,16 +183,25 @@ class arb: public detail::base_arb<>
             ::arb_init(&m_arb);
             ::arb_swap(&m_arb,&other.m_arb);
         }
+        /// Generic constructor.
+        /**
+         * \note
+         * This oprewo
+         * 
+         * @param[in] x construction argument.
+         */
         template <typename T, typename std::enable_if<is_interoperable<T>::value,int>::type = 0>
         explicit arb(T x) noexcept : m_prec(detail::base_arb<>::default_prec)
         {
             ::arb_init(&m_arb);
             construct(x);
         }
+        /// Destructor.
         ~arb()
         {
             ::arb_clear(&m_arb);
         }
+        /// Copy assignment operator.
         arb &operator=(const arb &other)
         {
             if (this == &other) {
@@ -178,8 +216,11 @@ class arb: public detail::base_arb<>
             swap(other);
             return *this;
         }
-        void add_error(double err) noexcept
+        void add_error(double err)
         {
+            if (err < 0. || !std::isfinite(err)) {
+                throw std::invalid_argument("an error value must be non-negative and finite");
+            }
             ::arf_t tmp_arf;
             ::arf_init_set_ui(tmp_arf,0u);
             ::arf_set_d(tmp_arf,err);
@@ -197,13 +238,9 @@ class arb: public detail::base_arb<>
             }
             m_prec = prec;
         }
-        friend arb operator+(const arb &a, const arb &b)
+        long get_precision() const noexcept
         {
-            const long prec = std::max<long>(a.m_prec,b.m_prec);
-            arb retval;
-            retval.m_prec = prec;
-            ::arb_add(&retval.m_arb,a,b,prec);
-            return retval;
+            return m_prec;
         }
         arb cos() const
         {
@@ -212,6 +249,7 @@ class arb: public detail::base_arb<>
             ::arb_cos(&retval.m_arb,*this,m_prec);
             return retval;
         }
+        /// Swap method.
         void swap(arb &other) noexcept
         {
             if (this == &other) {
@@ -220,34 +258,60 @@ class arb: public detail::base_arb<>
             ::arb_swap(&m_arb,&other.m_arb);
             std::swap(m_prec,other.m_prec);
         }
+        /// Implicit conversion operator to <tt>const arb_struct *</tt>.
+        /**
+         * This operator allows to pass an arbpp::arb object
+         * as a <tt>const arb_t</tt> argument to Arb's C API.
+         */
         operator const ::arb_struct *() const noexcept
         {
             return &m_arb;
-        }
-        friend std::ostream &operator<<(std::ostream &os, const arb &a)
-        {
-            os << '[';
-            // First print the arf.
-            print_arf(os,arb_midref(&a.m_arb),a.m_prec);
-            os << " +/- ";
-            // Now print the mag.
-            print_mag(os,arb_radref(&a.m_arb),a.m_prec);
-            os << ']';
-            return os;
-        }
-        // Free friend functions, to be used with ADL.
-        friend arb cos(const arb &a)
-        {
-            return a.cos();
-        }
-        friend void swap(arb &a0, arb &a1)
-        {
-            a0.swap(a1);
         }
     private:
         ::arb_struct    m_arb;
         long            m_prec;
 };
+
+/// Binary addition.
+/**
+ * @param[in] a first operand.
+ * @param[in] b second operand.
+ * 
+ * @return <tt>a+b</tt>.
+ */
+inline arb operator+(const arb &a, const arb &b)
+{
+    const long prec = std::max<long>(a.m_prec,b.m_prec);
+    arb retval;
+    retval.m_prec = prec;
+    ::arb_add(&retval.m_arb,a,b,prec);
+    return retval;
+}
+
+/// Stream operator.
+inline std::ostream &operator<<(std::ostream &os, const arb &a)
+{
+    os << '[';
+    // First print the arf.
+    arb::print_arf(os,arb_midref(&a.m_arb),a.m_prec);
+    os << " +/- ";
+    // Now print the mag.
+    arb::print_mag(os,arb_radref(&a.m_arb),a.m_prec);
+    os << ']';
+    return os;
+}
+
+/// Cosine.
+inline arb cos(const arb &a)
+{
+    return a.cos();
+}
+
+/// Swap.
+inline void swap(arb &a0, arb &a1)
+{
+    a0.swap(a1);
+}
 
 }
 

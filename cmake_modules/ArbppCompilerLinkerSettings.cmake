@@ -67,7 +67,7 @@ if(CMAKE_COMPILER_IS_CLANGXX OR CMAKE_COMPILER_IS_GNUCXX)
     ARBPP_CHECK_ENABLE_CXX_FLAG(-Wnon-virtual-dtor)
     ARBPP_CHECK_ENABLE_CXX_FLAG(-Wnoexcept)
     ARBPP_CHECK_ENABLE_CXX_FLAG(-Wlogical-op)
-    # NOTE: warning from Arb.
+    # NOTE: many warnings from Arb.
     # ARBPP_CHECK_ENABLE_CXX_FLAG(-Wconversion)
     # NOTE: this can be useful, but at the moment it triggers lots of warnings.
     # ARBPP_CHECK_ENABLE_CXX_FLAG(-Wold-style-cast)
