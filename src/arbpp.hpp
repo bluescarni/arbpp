@@ -18,14 +18,14 @@
 namespace arbpp
 {
 
-/// Namespace for implementation details.
+// Namespace for implementation details.
 namespace detail
 {
 
 template <typename = void>
 struct base_arb
 {
-    /// Default precision, in bits.
+    // Default precision, in bits.
     static const long default_prec = 53;
 };
 
