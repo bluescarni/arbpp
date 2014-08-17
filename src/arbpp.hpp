@@ -34,11 +34,6 @@ const long base_arb<T>::default_prec;
 
 }
 
-// A few forward declarations.
-class arb;
-arb operator+(const arb &, const arb &);
-std::ostream &operator<<(std::ostream &, const arb &);
-
 /// Real number represented as a floating-point ball.
 /**
  * \section interop Interoperability with fundamental types
@@ -55,9 +50,23 @@ std::ostream &operator<<(std::ostream &, const arb &);
  */
 class arb: public detail::base_arb<>
 {
-        // Friends.
-        friend arb operator+(const arb &, const arb &);
-        friend std::ostream &operator<<(std::ostream &, const arb &);
+        // Basic RAII holder for arf objects.
+        struct arf_raii
+        {
+            arf_raii() noexcept
+            {
+                ::arf_init_set_ui(&m_arf,0u);
+            }
+            arf_raii(const arf_raii &) = delete;
+            arf_raii(arf_raii &&) = delete;
+            arf_raii &operator=(const arf_raii &) = delete;
+            arf_raii &operator=(arf_raii &&) = delete;
+            ~arf_raii()
+            {
+                ::arf_clear(&m_arf);
+            }
+            ::arf_struct m_arf;
+        };
         // Signed integers with which arb can interoperate.
         template <typename T>
         struct is_arb_int
@@ -85,6 +94,12 @@ class arb: public detail::base_arb<>
         struct is_interoperable
         {
             static const bool value = is_arb_int<T>::value || is_arb_uint<T>::value || is_arb_float<T>::value;
+        };
+        // Type valid for arithmetic operations.
+        template <typename T>
+        struct is_arithmetic_type
+        {
+            static const bool value = is_interoperable<T>::value || std::is_same<T,arb>::value;
         };
         // Custom is_digit checker.
         static bool is_digit(char c)
@@ -158,11 +173,83 @@ class arb: public detail::base_arb<>
         template <typename T, typename std::enable_if<is_arb_float<T>::value,int>::type = 0>
         void construct(const T &x)
         {
-            ::arf_t tmp_arf;
-            ::arf_init_set_ui(tmp_arf,0u);
-            ::arf_set_d(tmp_arf,static_cast<double>(x));
-            ::arb_set_arf(&m_arb,tmp_arf);
-            ::arf_clear(tmp_arf);
+            arf_raii tmp_arf;
+            ::arf_set_d(&tmp_arf.m_arf,static_cast<double>(x));
+            ::arb_set_arf(&m_arb,&tmp_arf.m_arf);
+        }
+        // Addition.
+        void in_place_add(const arb &other)
+        {
+            // Compute the max precision.
+            const long prec = std::max<long>(m_prec,other.m_prec);
+            ::arb_add(&m_arb,&m_arb,&other.m_arb,prec);
+            m_prec = prec;
+        }
+        template <typename T, typename std::enable_if<is_arb_int<T>::value,int>::type = 0>
+        void in_place_add(const T &n)
+        {
+            ::arb_add_si(&m_arb,&m_arb,static_cast<long>(n),m_prec);
+        }
+        template <typename T, typename std::enable_if<is_arb_uint<T>::value,int>::type = 0>
+        void in_place_add(const T &n)
+        {
+            ::arb_add_ui(&m_arb,&m_arb,static_cast<unsigned long>(n),m_prec);
+        }
+        template <typename T, typename std::enable_if<is_arb_float<T>::value,int>::type = 0>
+        void in_place_add(const T &x)
+        {
+            arf_raii tmp_arf;
+            ::arf_set_d(&tmp_arf.m_arf,static_cast<double>(x));
+            ::arb_add_arf(&m_arb,&m_arb,&tmp_arf.m_arf,m_prec);
+        }
+        static arb binary_plus(const arb &a, const arb &b)
+        {
+            const long prec = std::max<long>(a.m_prec,b.m_prec);
+            arb retval;
+            ::arb_add(&retval.m_arb,&a.m_arb,&b.m_arb,prec);
+            retval.m_prec = prec;
+            return retval;
+        }
+        template <typename T, typename std::enable_if<is_arb_int<T>::value,int>::type = 0>
+        static arb binary_plus(const arb &a, const T &n)
+        {
+            arb retval;
+            ::arb_add_si(&retval.m_arb,&a.m_arb,static_cast<long>(n),a.m_prec);
+            retval.m_prec = a.m_prec;
+            return retval;
+        }
+        template <typename T, typename std::enable_if<is_arb_int<T>::value,int>::type = 0>
+        static arb binary_plus(const T &n, const arb &a)
+        {
+            return binary_plus(a,n);
+        }
+        template <typename T, typename std::enable_if<is_arb_uint<T>::value,int>::type = 0>
+        static arb binary_plus(const arb &a, const T &n)
+        {
+            arb retval;
+            ::arb_add_ui(&retval.m_arb,&a.m_arb,static_cast<unsigned long>(n),a.m_prec);
+            retval.m_prec = a.m_prec;
+            return retval;
+        }
+        template <typename T, typename std::enable_if<is_arb_uint<T>::value,int>::type = 0>
+        static arb binary_plus(const T &n, const arb &a)
+        {
+            return binary_plus(a,n);
+        }
+        template <typename T, typename std::enable_if<is_arb_float<T>::value,int>::type = 0>
+        static arb binary_plus(const arb &a, const T &x)
+        {
+            arb retval;
+            arf_raii tmp_arf;
+            ::arf_set_d(&tmp_arf.m_arf,static_cast<double>(x));
+            ::arb_add_arf(&retval.m_arb,&a.m_arb,&tmp_arf.m_arf,a.m_prec);
+            retval.m_prec = a.m_prec;
+            return retval;
+        }
+        template <typename T, typename std::enable_if<is_arb_float<T>::value,int>::type = 0>
+        static arb binary_plus(const T &x, const arb &a)
+        {
+            return binary_plus(a,x);
         }
     public:
         /// Default constructor.
@@ -180,7 +267,7 @@ class arb: public detail::base_arb<>
         arb(const arb &other) noexcept : m_prec(other.m_prec)
         {
             ::arb_init(&m_arb);
-            ::arb_set(&m_arb,other);
+            ::arb_set(&m_arb,&other.m_arb);
         }
         /// Move constructor.
         /**
@@ -223,7 +310,7 @@ class arb: public detail::base_arb<>
             if (this == &other) {
                 return *this;
             }
-            ::arb_set(&m_arb,other);
+            ::arb_set(&m_arb,&other.m_arb);
             m_prec = other.m_prec;
             return *this;
         }
@@ -251,11 +338,9 @@ class arb: public detail::base_arb<>
             if (err < 0. || std::isnan(err)) {
                 throw std::invalid_argument("an error value must be non-negative and not NaN");
             }
-            ::arf_t tmp_arf;
-            ::arf_init_set_ui(tmp_arf,0u);
-            ::arf_set_d(tmp_arf,err);
-            ::arb_add_error_arf(&m_arb,tmp_arf);
-            ::arf_clear(tmp_arf);
+            arf_raii tmp_arf;
+            ::arf_set_d(&tmp_arf.m_arf,err);
+            ::arb_add_error_arf(&m_arb,&tmp_arf.m_arf);
         }
         /// Precision setter.
         /**
@@ -285,18 +370,12 @@ class arb: public detail::base_arb<>
         {
             return m_prec;
         }
-        /// Cosine.
-        /**
-         * @return the cosine of \p this.
-         */
-        arb cos() const noexcept
-        {
-            arb retval;
-            retval.m_prec = m_prec;
-            ::arb_cos(&retval.m_arb,*this,m_prec);
-            return retval;
-        }
         /// Swap method.
+        /**
+         * Swap efficiently \p this with \p other.
+         * 
+         * @param[in] other argument for swap.
+         */
         void swap(arb &other) noexcept
         {
             if (this == &other) {
@@ -305,60 +384,106 @@ class arb: public detail::base_arb<>
             ::arb_swap(&m_arb,&other.m_arb);
             std::swap(m_prec,other.m_prec);
         }
-        /// Implicit conversion operator to <tt>const arb_struct *</tt>.
+        /// Get a const pointer to the internal \p arb_struct.
         /**
-         * This operator allows to pass an arbpp::arb object
-         * as a <tt>const arb_t</tt> argument to Arb's C API.
+         * @return const pointer to the internal \p arb_struct.
          */
-        operator const ::arb_struct *() const noexcept
+        const ::arb_struct *get_arb_t() const noexcept
         {
             return &m_arb;
+        }
+        /// Get a mutable pointer to the internal \p arb_struct.
+        /**
+         * @return pointer to the internal \p arb_struct.
+         */
+        ::arb_struct *get_arb_t() noexcept
+        {
+            return &m_arb;
+        }
+        /// Stream operator.
+        /**
+         * This function will print to stream a human-readable representation
+         * of \p a.
+         * The number of decimal digits that will be displayed depends on
+         * the precision value associated to \p a.
+         * 
+         * @param[in,out] os target stream.
+         * @param[in] a arbpp::arb to be streamed.
+         * 
+         * @return reference to \p os.
+         * 
+         * @throws std::invalid_argument in case of any error in the conversion
+         * of \p a to string.
+         */
+        friend std::ostream &operator<<(std::ostream &os, const arb &a)
+        {
+            os << '(';
+            // First print the arf.
+            print_arf(os,arb_midref(&a.m_arb),a.m_prec);
+            os << " +/- ";
+            // Now print the mag.
+            print_mag(os,arb_radref(&a.m_arb),a.m_prec);
+            os << ')';
+            return os;
+        }
+        /// In-place addition.
+        /**
+         * \note
+         * This operator is enabled only if \p T is an \ref interop "interoperable type"
+         * or arbpp::arb.
+         * 
+         * This method will set \p this to <tt>this + x</tt>. In case \p T is arbp::arb, then
+         * the operation is carried out with a precision corresponding to the maximum between
+         * the precision of \p this and \p x.
+         * 
+         * @param[in] x addition argument.
+         * 
+         * @return reference to \p this.
+         */
+        template <typename T, typename std::enable_if<is_arithmetic_type<T>::value,int>::type = 0>
+        arb &operator+=(const T &x) noexcept
+        {
+            in_place_add(x);
+            return *this;
+        }
+        /// Binary addition.
+        /**
+         * @param[in] a first operand.
+         * @param[in] b second operand.
+         * 
+         * @return <tt>a+b</tt>.
+         */
+        template <typename T, typename U>
+        friend auto operator+(const T &a, const U &b) noexcept -> decltype(arb::binary_plus(a,b))
+        {
+            return binary_plus(a,b);
+        }
+        /// Cosine.
+        /**
+         * @return the cosine of \p this.
+         */
+        arb cos() const noexcept
+        {
+            arb retval;
+            ::arb_cos(&retval.m_arb,&m_arb,m_prec);
+            retval.m_prec = m_prec;
+            return retval;
+        }
+        // Friend inline functions.
+        /// Cosine.
+        friend arb cos(const arb &a)
+        {
+            return a.cos();
+        }
+        /// Swap.
+        friend void swap(arb &a0, arb &a1)
+        {
+            a0.swap(a1);
         }
     private:
         ::arb_struct    m_arb;
         long            m_prec;
 };
-
-/// Binary addition.
-/**
- * @param[in] a first operand.
- * @param[in] b second operand.
- * 
- * @return <tt>a+b</tt>.
- */
-inline arb operator+(const arb &a, const arb &b)
-{
-    const long prec = std::max<long>(a.m_prec,b.m_prec);
-    arb retval;
-    retval.m_prec = prec;
-    ::arb_add(&retval.m_arb,a,b,prec);
-    return retval;
-}
-
-/// Stream operator.
-inline std::ostream &operator<<(std::ostream &os, const arb &a)
-{
-    os << '[';
-    // First print the arf.
-    arb::print_arf(os,arb_midref(&a.m_arb),a.m_prec);
-    os << " +/- ";
-    // Now print the mag.
-    arb::print_mag(os,arb_radref(&a.m_arb),a.m_prec);
-    os << ']';
-    return os;
-}
-
-/// Cosine.
-inline arb cos(const arb &a)
-{
-    return a.cos();
-}
-
-/// Swap.
-inline void swap(arb &a0, arb &a1)
-{
-    a0.swap(a1);
-}
 
 }
 
