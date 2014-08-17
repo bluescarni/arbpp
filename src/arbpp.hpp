@@ -43,6 +43,11 @@ const long base_arb<T>::default_prec;
  * - \p char,
  * - \p float and \p double.
  * 
+ * \section exception_safety Exception safety guarantee
+ * 
+ * This class provides the strong exception safety guarantee for all operations. In case of memory allocation errors by
+ * lower-level libraries, the program will terminate.
+ * 
  * \section move_semantics Move semantics
  *
  * Move construction and move assignment will leave the moved-from object in an
@@ -440,9 +445,9 @@ class arb: public detail::base_arb<>
          * This operator is enabled only if \p T is an \ref interop "interoperable type"
          * or arbpp::arb.
          * 
-         * This method will set \p this to <tt>this + x</tt>. In case \p T is arbp::arb, then
+         * This method will set \p this to <tt>this + x</tt>. In case \p T is arbpp::arb, then
          * the operation is carried out with a precision corresponding to the maximum between
-         * the precision of \p this and \p x.
+         * the precisions of \p this and \p x.
          * 
          * @param[in] x addition argument.
          * 
@@ -454,8 +459,19 @@ class arb: public detail::base_arb<>
             in_place_add(x);
             return *this;
         }
-        /// Binary addition.
+        /// Generic binary addition involving arbpp::arb.
         /**
+         * \note
+         * This template operator is enabled only if either:
+         * - \p T is arbpp::arb and \p U is an \ref interop "interoperable type",
+         * - \p U is arbpp::arb and \p T is an \ref interop "interoperable type",
+         * - both \p T and \p U are arbpp::arb.
+         * 
+         * This method will compute <tt>a + b</tt> and return it as an arbpp::arb. In case \p T and \p U are both
+         * arbpp::arb, then the operation is carried out with a precision corresponding to the maximum between
+         * the precisions of \p a and \p b. Otherwise, the result will have the precision of the
+         * arbpp::arb argument.
+         * 
          * @param[in] a first operand.
          * @param[in] b second operand.
          * 
@@ -479,12 +495,23 @@ class arb: public detail::base_arb<>
         }
         // Friend inline functions.
         /// Cosine.
-        friend arb cos(const arb &a)
+        /**
+         * @param[in] a cosine argument.
+         * 
+         * @return <tt>a.cos()</tt>.
+         */
+        friend arb cos(const arb &a) noexcept
         {
             return a.cos();
         }
         /// Swap.
-        friend void swap(arb &a0, arb &a1)
+        /**
+         * Equivalent to <tt>a0.swap(a1)</tt>.
+         * 
+         * @param[in] a0 first argument.
+         * @param[in] a1 second argument.
+         */
+        friend void swap(arb &a0, arb &a1) noexcept
         {
             a0.swap(a1);
         }
