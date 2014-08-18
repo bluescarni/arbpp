@@ -439,6 +439,14 @@ class arb: public detail::base_arb<>
             os << ')';
             return os;
         }
+        /// Identity operator.
+        /**
+         * @return a copy of \p this.
+         */
+        arb operator+() const noexcept
+        {
+            return *this;
+        }
         /// In-place addition.
         /**
          * \note
