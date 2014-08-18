@@ -296,8 +296,8 @@ class arb: public detail::base_arb<>
          * \note
          * This constructor is enabled only if \p T is an \ref interop "interoperable type".
          * 
-         * Construction from an interoperable type is always exact. The internal precision
-         * of the object will be set to the default value.
+         * Construction from an interoperable type is always exact. The precision
+         * will be set to the default value.
          * 
          * @param[in] x construction argument.
          */
