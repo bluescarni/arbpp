@@ -40,13 +40,13 @@ const long base_arb<T>::default_prec;
  * 
  * Interoperability with the following types is provided:
  * - <tt>signed char</tt>, \p short, \p int, \p long and unsigned counterparts,
- * - \p char,
- * - \p float and \p double.
+ * - \p char, \p float and \p double.
  * 
  * \section exception_safety Exception safety guarantee
  * 
- * This class provides the strong exception safety guarantee for all operations. In case of memory allocation errors by
- * lower-level libraries, the program will terminate.
+ * This class provides the strong exception safety guarantee for all operations.
+ * In case of memory allocation errors by
+ * lower-level libraries (e.g., GMP), the program will terminate.
  * 
  * \section move_semantics Move semantics
  *
@@ -193,10 +193,11 @@ class arb: public detail::base_arb<>
         // Addition.
         void in_place_add(const arb &other)
         {
-            // Compute the max precision.
-            const long prec = std::max<long>(m_prec,other.m_prec);
-            ::arb_add(&m_arb,&m_arb,&other.m_arb,prec);
-            m_prec = prec;
+            // Work with max precision.
+            if (other.m_prec > m_prec) {
+                m_prec = other.m_prec;
+            }
+            ::arb_add(&m_arb,&m_arb,&other.m_arb,m_prec);
         }
         template <typename T, typename std::enable_if<is_arb_int<T>::value,int>::type = 0>
         void in_place_add(const T &n)
@@ -217,10 +218,14 @@ class arb: public detail::base_arb<>
         }
         static arb binary_add(const arb &a, const arb &b)
         {
-            const long prec = std::max<long>(a.m_prec,b.m_prec);
             arb retval;
-            ::arb_add(&retval.m_arb,&a.m_arb,&b.m_arb,prec);
-            retval.m_prec = prec;
+            // Set max precision.
+            if (a.m_prec > b.m_prec) {
+                retval.m_prec = a.m_prec;
+            } else {
+                retval.m_prec = b.m_prec;
+            }
+            ::arb_add(&retval.m_arb,&a.m_arb,&b.m_arb,retval.m_prec);
             return retval;
         }
         template <typename T, typename std::enable_if<is_arb_int<T>::value,int>::type = 0>
@@ -268,6 +273,7 @@ class arb: public detail::base_arb<>
         /// Default constructor.
         /**
          * The value is initialised with both midpoint and radius equal to zero.
+         * The precision is set to the default value.
          */
         arb() noexcept : m_prec(detail::base_arb<>::default_prec)
         {
@@ -348,8 +354,8 @@ class arb: public detail::base_arb<>
          */
         void add_error(double err)
         {
-            if (err < 0. || std::isnan(err)) {
-                throw std::invalid_argument("an error value must be non-negative and not NaN");
+            if (std::isnan(err) || err <= 0.) {
+                throw std::invalid_argument("an error value must be positive and not NaN");
             }
             arf_raii tmp_arf;
             ::arf_set_d(&tmp_arf.m_arf,err);
@@ -501,32 +507,33 @@ class arb: public detail::base_arb<>
             retval.m_prec = m_prec;
             return retval;
         }
-        // Friend inline functions.
-        /// Cosine.
-        /**
-         * @param[in] a cosine argument.
-         * 
-         * @return <tt>a.cos()</tt>.
-         */
-        friend arb cos(const arb &a) noexcept
-        {
-            return a.cos();
-        }
-        /// Swap.
-        /**
-         * Equivalent to <tt>a0.swap(a1)</tt>.
-         * 
-         * @param[in] a0 first argument.
-         * @param[in] a1 second argument.
-         */
-        friend void swap(arb &a0, arb &a1) noexcept
-        {
-            a0.swap(a1);
-        }
     private:
         ::arb_struct    m_arb;
         long            m_prec;
 };
+
+/// Cosine.
+/**
+ * @param[in] a cosine argument.
+ * 
+ * @return <tt>a.cos()</tt>.
+ */
+inline arb cos(const arb &a) noexcept
+{
+    return a.cos();
+}
+
+/// Swap.
+/**
+ * Equivalent to <tt>a0.swap(a1)</tt>.
+ * 
+ * @param[in] a0 first argument.
+ * @param[in] a1 second argument.
+ */
+inline void swap(arb &a0, arb &a1) noexcept
+{
+    a0.swap(a1);
+}
 
 }
 

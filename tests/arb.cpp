@@ -27,6 +27,8 @@ BOOST_AUTO_TEST_CASE(arb_base_test)
     std::cout << (std::numeric_limits<long>::max() + a0) << '\n';
     std::cout << (a0 + a1) << '\n';
     std::cout << cos(arb{0.0000001}) << '\n';
+    a0.add_error(1./0.);
+    std::cout << a0 << '\n';
 }
 
 // Keep this for last, in order to have proper

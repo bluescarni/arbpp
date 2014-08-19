@@ -15,10 +15,8 @@ Contents:
 .. doxygenclass::  arbpp::arb
    :members:
 
-.. doxygenfunction:: arbpp::operator+
 .. doxygenfunction:: arbpp::cos
 .. doxygenfunction:: arbpp::swap
-.. doxygenfunction:: arbpp::operator<<
 
 
 Indices and tables
