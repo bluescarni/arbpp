@@ -12,13 +12,6 @@ Contents:
    :maxdepth: 2
 
 
-.. doxygenclass::  arbpp::arb
-   :members:
-
-.. doxygenfunction:: arbpp::cos
-.. doxygenfunction:: arbpp::swap
-
-
 Indices and tables
 ==================
 
