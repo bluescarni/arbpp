@@ -292,10 +292,11 @@ class arb: public detail::base_arb<>
         /**
          * @param[in] other construction argument.
          */
-        arb(arb &&other) noexcept : m_prec(other.m_prec)
+        arb(arb &&other) noexcept : m_prec(detail::base_arb<>::default_prec)
         {
+            // Init a default arb, swap it out with other.
             ::arb_init(&m_arb);
-            ::arb_swap(&m_arb,&other.m_arb);
+            swap(other);
         }
         /// Generic constructor.
         /**

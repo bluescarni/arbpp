@@ -5,12 +5,39 @@
 
 // NOTE: this may change in the future to flint/flint.h, if Arb
 // gets this change as well.
+#include "arb.h"
 #include "flint.h"
 
 using namespace arbpp;
 
+BOOST_AUTO_TEST_CASE(arb_ctor_assignment_test)
+{
+    arb a0;
+    BOOST_CHECK(::arf_is_zero(arb_midref(a0.get_arb_t())));
+    BOOST_CHECK(::mag_is_zero(arb_radref(a0.get_arb_t())));
+    BOOST_CHECK_EQUAL(a0.get_precision(),arb::default_prec);
+    arb a1{a0};
+    BOOST_CHECK(::arf_is_zero(arb_midref(a1.get_arb_t())));
+    BOOST_CHECK(::mag_is_zero(arb_radref(a1.get_arb_t())));
+    BOOST_CHECK_EQUAL(a1.get_precision(),arb::default_prec);
+    a1 = arb{1};
+    a1.set_precision(100);
+    arb a2{a1};
+    BOOST_CHECK(::arf_is_one(arb_midref(a2.get_arb_t())));
+    BOOST_CHECK(::mag_is_zero(arb_radref(a2.get_arb_t())));
+    BOOST_CHECK_EQUAL(a2.get_precision(),100);
+    arb a3{std::move(a2)};
+    BOOST_CHECK(::arf_is_one(arb_midref(a3.get_arb_t())));
+    BOOST_CHECK(::mag_is_zero(arb_radref(a3.get_arb_t())));
+    BOOST_CHECK_EQUAL(a3.get_precision(),100);
+    BOOST_CHECK(::arf_is_zero(arb_midref(a2.get_arb_t())));
+    BOOST_CHECK(::mag_is_zero(arb_radref(a2.get_arb_t())));
+    BOOST_CHECK_EQUAL(a2.get_precision(),arb::default_prec);
+}
+
 BOOST_AUTO_TEST_CASE(arb_base_test)
 {
+    
     arb a0{20};
     a0 += 1;
     std::cout << a0 << '\n';
