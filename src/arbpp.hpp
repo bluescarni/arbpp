@@ -27,6 +27,8 @@ struct base_arb
 {
     // Default precision, in bits.
     static const long default_prec = 53;
+    static_assert(default_prec >= MPFR_PREC_MIN && default_prec <= MPFR_PREC_MAX,
+        "Invalid default precision.");
 };
 
 template <typename T>
@@ -53,7 +55,7 @@ const long base_arb<T>::default_prec;
  * Move construction and move assignment will leave the moved-from object in an
  * unspecified but valid state.
  */
-class arb: public detail::base_arb<>
+class arb: private detail::base_arb<>
 {
         // Basic RAII holder for arf objects.
         struct arf_raii
@@ -270,12 +272,20 @@ class arb: public detail::base_arb<>
             return binary_add(a,x);
         }
     public:
+        /// Default precision.
+        /**
+         * @return default precision for arbpp::arb objects.
+         */
+        static long get_default_precision()
+        {
+            return detail::base_arb<>::default_prec;
+        }
         /// Default constructor.
         /**
          * The value is initialised with both midpoint and radius equal to zero.
          * The precision is set to the default value.
          */
-        arb() noexcept : m_prec(detail::base_arb<>::default_prec)
+        arb() : m_prec(get_default_precision())
         {
             ::arb_init(&m_arb);
         }
@@ -292,7 +302,7 @@ class arb: public detail::base_arb<>
         /**
          * @param[in] other construction argument.
          */
-        arb(arb &&other) noexcept : m_prec(detail::base_arb<>::default_prec)
+        arb(arb &&other) noexcept : m_prec(get_default_precision())
         {
             // Init a default arb, swap it out with other.
             ::arb_init(&m_arb);
@@ -309,7 +319,7 @@ class arb: public detail::base_arb<>
          * @param[in] x construction argument.
          */
         template <typename T, typename std::enable_if<is_interoperable<T>::value,int>::type = 0>
-        explicit arb(T x) noexcept : m_prec(detail::base_arb<>::default_prec)
+        explicit arb(const T &x) : m_prec(get_default_precision())
         {
             ::arb_init(&m_arb);
             construct(x);
@@ -342,7 +352,26 @@ class arb: public detail::base_arb<>
          */
         arb &operator=(arb &&other) noexcept
         {
+            // this == &other check already in swap().
             swap(other);
+            return *this;
+        }
+        /// Generic assignment.
+        /**
+         * \note
+         * This assignment operator is enabled only if \p T is an \ref interop "interoperable type".
+         * 
+         * The operation is equivalent to an assignment from an arbpp::arb object constructed from \p x.
+         * 
+         * @param[in] x assignment argument.
+         * 
+         * @return reference to \p this.
+         */
+        template <typename T, typename std::enable_if<is_interoperable<T>::value,int>::type = 0>
+        arb &operator=(const T &x)
+        {
+            m_prec = get_default_precision();
+            construct(x);
             return *this;
         }
         /// Add error.
