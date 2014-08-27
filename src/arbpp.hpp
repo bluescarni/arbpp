@@ -8,6 +8,7 @@
 #include <fmpr.h>
 #include <iostream>
 #include <limits>
+#include <mag.h>
 #include <memory>
 #include <mpfr.h>
 #include <stdexcept>
@@ -34,6 +35,43 @@ struct base_arb
 template <typename T>
 const long base_arb<T>::default_prec;
 
+// Basic RAII holders.
+struct arf_raii
+{
+    arf_raii()
+    {
+        // This sets to zero.
+        ::arf_init(&m_arf);
+    }
+    arf_raii(const arf_raii &) = delete;
+    arf_raii(arf_raii &&) = delete;
+    arf_raii &operator=(const arf_raii &) = delete;
+    arf_raii &operator=(arf_raii &&) = delete;
+    ~arf_raii()
+    {
+        ::arf_clear(&m_arf);
+    }
+    ::arf_struct m_arf;
+};
+
+struct fmpr_raii
+{
+    fmpr_raii()
+    {
+        // Sets to zero as well.
+        ::fmpr_init(&m_fmpr);
+    }
+    fmpr_raii(const fmpr_raii &) = delete;
+    fmpr_raii(fmpr_raii &&) = delete;
+    fmpr_raii &operator=(const fmpr_raii &) = delete;
+    fmpr_raii &operator=(fmpr_raii &&) = delete;
+    ~fmpr_raii()
+    {
+        ::fmpr_clear(&m_fmpr);
+    }
+    ::fmpr_struct m_fmpr;
+};
+
 }
 
 /// Real number represented as a floating-point ball.
@@ -57,23 +95,9 @@ const long base_arb<T>::default_prec;
  */
 class arb: private detail::base_arb<>
 {
-        // Basic RAII holder for arf objects.
-        struct arf_raii
-        {
-            arf_raii() noexcept
-            {
-                ::arf_init_set_ui(&m_arf,0u);
-            }
-            arf_raii(const arf_raii &) = delete;
-            arf_raii(arf_raii &&) = delete;
-            arf_raii &operator=(const arf_raii &) = delete;
-            arf_raii &operator=(arf_raii &&) = delete;
-            ~arf_raii()
-            {
-                ::arf_clear(&m_arf);
-            }
-            ::arf_struct m_arf;
-        };
+        // Import locally the RAII names.
+        typedef detail::arf_raii arf_raii;
+        typedef detail::fmpr_raii fmpr_raii;
         // Signed integers with which arb can interoperate.
         template <typename T>
         struct is_arb_int
@@ -215,7 +239,9 @@ class arb: private detail::base_arb<>
         void in_place_add(const T &x)
         {
             arf_raii tmp_arf;
+            // Set tmp_arf *exactly* to x.
             ::arf_set_d(&tmp_arf.m_arf,static_cast<double>(x));
+            // Add with precision m_prec.
             ::arb_add_arf(&m_arb,&m_arb,&tmp_arf.m_arf,m_prec);
         }
         static arb binary_add(const arb &a, const arb &b)
@@ -293,7 +319,7 @@ class arb: private detail::base_arb<>
         /**
          * @param[in] other construction argument.
          */
-        arb(const arb &other) noexcept : m_prec(other.m_prec)
+        arb(const arb &other) : m_prec(other.m_prec)
         {
             ::arb_init(&m_arb);
             ::arb_set(&m_arb,&other.m_arb);
@@ -335,7 +361,7 @@ class arb: private detail::base_arb<>
          * 
          * @return reference to \p this.
          */
-        arb &operator=(const arb &other) noexcept
+        arb &operator=(const arb &other)
         {
             if (this == &other) {
                 return *this;
@@ -350,7 +376,7 @@ class arb: private detail::base_arb<>
          * 
          * @return reference to \p this.
          */
-        arb &operator=(arb &&other) noexcept
+        arb &operator=(arb &&other)
         {
             // this == &other check already in swap().
             swap(other);
@@ -415,7 +441,7 @@ class arb: private detail::base_arb<>
         /**
          * @return precision associated to \p this.
          */
-        long get_precision() const noexcept
+        long get_precision() const
         {
             return m_prec;
         }
@@ -437,7 +463,7 @@ class arb: private detail::base_arb<>
         /**
          * @return const pointer to the internal \p arb_struct.
          */
-        const ::arb_struct *get_arb_t() const noexcept
+        const ::arb_struct *get_arb_t() const
         {
             return &m_arb;
         }
@@ -445,7 +471,7 @@ class arb: private detail::base_arb<>
         /**
          * @return pointer to the internal \p arb_struct.
          */
-        ::arb_struct *get_arb_t() noexcept
+        ::arb_struct *get_arb_t()
         {
             return &m_arb;
         }
@@ -475,11 +501,31 @@ class arb: private detail::base_arb<>
             os << ')';
             return os;
         }
+        /// Midpoint getter.
+        /**
+         * @return the midpoint of \p this, rounded to \p double in an unspecified
+         * direction.
+         */
+        double get_midpoint() const
+        {
+            return ::arf_get_d(arb_midref(&m_arb),ARF_RND_DOWN);
+        }
+        /// Radius getter.
+        /**
+         * @return the radius of \p this, rounded to \p double in an unspecified
+         * direction.
+         */
+        double get_radius() const
+        {
+            fmpr_raii tmp;
+            ::mag_get_fmpr(&tmp.m_fmpr,arb_radref(&m_arb));
+            return ::fmpr_get_d(&tmp.m_fmpr,FMPR_RND_UP);
+        }
         /// Identity operator.
         /**
          * @return a copy of \p this.
          */
-        arb operator+() const noexcept
+        arb operator+() const
         {
             return *this;
         }
@@ -491,14 +537,15 @@ class arb: private detail::base_arb<>
          * 
          * This method will set \p this to <tt>this + x</tt>. In case \p T is arbpp::arb, then
          * the operation is carried out with a precision corresponding to the maximum between
-         * the precisions of \p this and \p x.
+         * the precisions of \p this and \p x. Otherwise, the operation is carried out with the
+         * precision of \p this.
          * 
          * @param[in] x addition argument.
          * 
          * @return reference to \p this.
          */
         template <typename T, typename std::enable_if<is_unary_arithmetic_type<T>::value,int>::type = 0>
-        arb &operator+=(const T &x) noexcept
+        arb &operator+=(const T &x)
         {
             in_place_add(x);
             return *this;
@@ -522,7 +569,7 @@ class arb: private detail::base_arb<>
          * @return <tt>a+b</tt>.
          */
         template <typename T, typename U, typename std::enable_if<are_binary_arithmetic_types<T,U>::value,int>::type = 0>
-        friend arb operator+(const T &a, const U &b) noexcept
+        friend arb operator+(const T &a, const U &b)
         {
             return binary_add(a,b);
         }
@@ -530,7 +577,7 @@ class arb: private detail::base_arb<>
         /**
          * @return the cosine of \p this.
          */
-        arb cos() const noexcept
+        arb cos() const
         {
             arb retval;
             ::arb_cos(&retval.m_arb,&m_arb,m_prec);
@@ -548,7 +595,7 @@ class arb: private detail::base_arb<>
  * 
  * @return <tt>a.cos()</tt>.
  */
-inline arb cos(const arb &a) noexcept
+inline arb cos(const arb &a)
 {
     return a.cos();
 }
