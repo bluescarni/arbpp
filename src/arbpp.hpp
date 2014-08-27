@@ -475,7 +475,7 @@ class arb: public detail::base_arb<>
         /// Midpoint getter.
         /**
          * @return the midpoint of \p this, rounded to \p double in an unspecified
-         * way.
+         * direction.
          */
         double get_midpoint() const
         {
@@ -484,7 +484,7 @@ class arb: public detail::base_arb<>
         /// Radius getter.
         /**
          * @return the radius of \p this, rounded to \p double in an unspecified
-         * way.
+         * direction.
          */
         double get_radius() const
         {
