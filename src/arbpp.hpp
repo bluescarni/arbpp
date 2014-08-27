@@ -215,7 +215,9 @@ class arb: public detail::base_arb<>
         void in_place_add(const T &x)
         {
             arf_raii tmp_arf;
+            // Set tmp_arf *exactly* to x.
             ::arf_set_d(&tmp_arf.m_arf,static_cast<double>(x));
+            // Add with precision m_prec.
             ::arb_add_arf(&m_arb,&m_arb,&tmp_arf.m_arf,m_prec);
         }
         static arb binary_add(const arb &a, const arb &b)
@@ -464,7 +466,8 @@ class arb: public detail::base_arb<>
          * 
          * This method will set \p this to <tt>this + x</tt>. In case \p T is arbpp::arb, then
          * the operation is carried out with a precision corresponding to the maximum between
-         * the precisions of \p this and \p x.
+         * the precisions of \p this and \p x. Otherwise, the operation is carried out with the
+         * precision of \p this.
          * 
          * @param[in] x addition argument.
          * 
