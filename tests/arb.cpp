@@ -4,11 +4,12 @@
 #include <boost/test/unit_test.hpp>
 
 #include <type_traits>
+#include <utility>
 
-// NOTE: this may change in the future to flint/flint.h, if Arb
-// gets this change as well.
 #include "arb.h"
-#include "flint.h"
+#include "arf.h"
+#include "mag.h"
+#include "flint/flint.h"
 
 using namespace arbpp;
 
@@ -36,6 +37,9 @@ BOOST_AUTO_TEST_CASE(arb_ctor_assignment_test)
     BOOST_CHECK((std::is_constructible<arb,long>::value));
     BOOST_CHECK((std::is_constructible<arb,char>::value));
     BOOST_CHECK((std::is_constructible<arb,unsigned char>::value));
+    BOOST_CHECK((std::is_assignable<arb &,unsigned char>::value));
+    BOOST_CHECK((std::is_assignable<arb &,double>::value));
+    BOOST_CHECK((!std::is_assignable<arb &,long double>::value));
     // Default ctor.
     arb a0;
     BOOST_CHECK(::arf_is_zero(arb_midref(a0.get_arb_t())));
@@ -88,7 +92,9 @@ BOOST_AUTO_TEST_CASE(arb_arithmetic_test)
 {
     BOOST_CHECK(is_addable<arb>::value);
     BOOST_CHECK((is_addable<arb,double>::value));
+    BOOST_CHECK((is_addable<double,arb>::value));
     BOOST_CHECK((!is_addable<arb,long double>::value));
+    BOOST_CHECK((!is_addable<long double,arb>::value));
 }
 
 BOOST_AUTO_TEST_CASE(arb_base_test)
