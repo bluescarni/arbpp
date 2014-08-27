@@ -8,6 +8,7 @@
 #include <fmpr.h>
 #include <iostream>
 #include <limits>
+#include <mag.h>
 #include <memory>
 #include <mpfr.h>
 #include <stdexcept>
@@ -32,12 +33,13 @@ struct base_arb
 template <typename T>
 const long base_arb<T>::default_prec;
 
-// Basic RAII holder for arf objects.
+// Basic RAII holders.
 struct arf_raii
 {
     arf_raii()
     {
-        ::arf_init_set_ui(&m_arf,0u);
+        // This sets to zero.
+        ::arf_init(&m_arf);
     }
     arf_raii(const arf_raii &) = delete;
     arf_raii(arf_raii &&) = delete;
@@ -48,6 +50,24 @@ struct arf_raii
         ::arf_clear(&m_arf);
     }
     ::arf_struct m_arf;
+};
+
+struct fmpr_raii
+{
+    fmpr_raii()
+    {
+        // Sets to zero as well.
+        ::fmpr_init(&m_fmpr);
+    }
+    fmpr_raii(const fmpr_raii &) = delete;
+    fmpr_raii(fmpr_raii &&) = delete;
+    fmpr_raii &operator=(const fmpr_raii &) = delete;
+    fmpr_raii &operator=(fmpr_raii &&) = delete;
+    ~fmpr_raii()
+    {
+        ::fmpr_clear(&m_fmpr);
+    }
+    ::fmpr_struct m_fmpr;
 };
 
 }
@@ -73,7 +93,9 @@ struct arf_raii
  */
 class arb: public detail::base_arb<>
 {
+        // Import locally the RAII names.
         typedef detail::arf_raii arf_raii;
+        typedef detail::fmpr_raii fmpr_raii;
         // Signed integers with which arb can interoperate.
         template <typename T>
         struct is_arb_int
@@ -449,6 +471,26 @@ class arb: public detail::base_arb<>
             print_mag(os,arb_radref(&a.m_arb),a.m_prec);
             os << ')';
             return os;
+        }
+        /// Midpoint getter.
+        /**
+         * @return the midpoint of \p this, rounded to \p double in an unspecified
+         * way.
+         */
+        double get_midpoint() const
+        {
+            return ::arf_get_d(arb_midref(&m_arb),ARF_RND_DOWN);
+        }
+        /// Radius getter.
+        /**
+         * @return the radius of \p this, rounded to \p double in an unspecified
+         * way.
+         */
+        double get_radius() const
+        {
+            fmpr_raii tmp;
+            ::mag_get_fmpr(&tmp.m_fmpr,arb_radref(&m_arb));
+            return ::fmpr_get_d(&tmp.m_fmpr,FMPR_RND_UP);
         }
         /// Identity operator.
         /**

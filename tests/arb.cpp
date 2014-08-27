@@ -12,10 +12,12 @@ using namespace arbpp;
 
 BOOST_AUTO_TEST_CASE(arb_ctor_assignment_test)
 {
+    // Default ctor.
     arb a0;
     BOOST_CHECK(::arf_is_zero(arb_midref(a0.get_arb_t())));
     BOOST_CHECK(::mag_is_zero(arb_radref(a0.get_arb_t())));
     BOOST_CHECK_EQUAL(a0.get_precision(),arb::default_prec);
+    // Copy ctor.
     arb a1{a0};
     BOOST_CHECK(::arf_is_zero(arb_midref(a1.get_arb_t())));
     BOOST_CHECK(::mag_is_zero(arb_radref(a1.get_arb_t())));
@@ -26,6 +28,7 @@ BOOST_AUTO_TEST_CASE(arb_ctor_assignment_test)
     BOOST_CHECK(::arf_is_one(arb_midref(a2.get_arb_t())));
     BOOST_CHECK(::mag_is_zero(arb_radref(a2.get_arb_t())));
     BOOST_CHECK_EQUAL(a2.get_precision(),100);
+    // Move ctor.
     arb a3{std::move(a2)};
     BOOST_CHECK(::arf_is_one(arb_midref(a3.get_arb_t())));
     BOOST_CHECK(::mag_is_zero(arb_radref(a3.get_arb_t())));
@@ -33,6 +36,19 @@ BOOST_AUTO_TEST_CASE(arb_ctor_assignment_test)
     BOOST_CHECK(::arf_is_zero(arb_midref(a2.get_arb_t())));
     BOOST_CHECK(::mag_is_zero(arb_radref(a2.get_arb_t())));
     BOOST_CHECK_EQUAL(a2.get_precision(),arb::default_prec);
+    // Generic ctor.
+    arb a4{42};
+    BOOST_CHECK_EQUAL(a4.get_midpoint(),42.);
+    BOOST_CHECK_EQUAL(a4.get_radius(),0.);
+    BOOST_CHECK_EQUAL(a4.get_radius(),-0.);
+    // TODO test this, below as well.
+    //BOOST_CHECK_EQUAL(a4.get_precision(),arb::get_default_precision());
+    BOOST_CHECK_EQUAL(arb{-42}.get_midpoint(),-42.);
+    BOOST_CHECK_EQUAL(arb{-42}.get_radius(),0);
+    BOOST_CHECK_EQUAL(arb{12u}.get_midpoint(),12.);
+    BOOST_CHECK_EQUAL(arb{12ul}.get_radius(),0);
+    BOOST_CHECK_EQUAL(arb{1.3}.get_midpoint(),1.3);
+    BOOST_CHECK_EQUAL(arb{1.3}.get_radius(),0.);
 }
 
 BOOST_AUTO_TEST_CASE(arb_base_test)
@@ -56,6 +72,7 @@ BOOST_AUTO_TEST_CASE(arb_base_test)
     std::cout << cos(arb{0.0000001}) << '\n';
     a0.add_error(1./0.);
     std::cout << a0 << '\n';
+    a0.get_midpoint();
 }
 
 // Keep this for last, in order to have proper
