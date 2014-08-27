@@ -376,7 +376,7 @@ class arb: private detail::base_arb<>
          * 
          * @return reference to \p this.
          */
-        arb &operator=(arb &&other)
+        arb &operator=(arb &&other) noexcept
         {
             // this == &other check already in swap().
             swap(other);

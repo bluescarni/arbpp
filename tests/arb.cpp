@@ -72,7 +72,7 @@ BOOST_AUTO_TEST_CASE(arb_ctor_assignment_test)
     BOOST_CHECK_EQUAL(arb{12u}.get_midpoint(),12.);
     BOOST_CHECK_EQUAL(arb{12ul}.get_radius(),0);
     BOOST_CHECK_EQUAL(arb{1.3}.get_midpoint(),1.3);
-    BOOST_CHECK_EQUAL(arb{1.3}.get_radius(),0.);    
+    BOOST_CHECK_EQUAL(arb{1.3}.get_radius(),0.);
     // Generic assignment.
     a1 = arb{0.5};
     a1.set_precision(100);
