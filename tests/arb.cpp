@@ -3,6 +3,9 @@
 #define BOOST_TEST_MODULE arb_test
 #include <boost/test/unit_test.hpp>
 
+#include <limits>
+#include <sstream>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 
@@ -97,6 +100,67 @@ BOOST_AUTO_TEST_CASE(arb_ctor_assignment_test)
     BOOST_CHECK(::arf_is_one(arb_midref(a1.get_arb_t())));
     BOOST_CHECK(::mag_is_zero(arb_radref(a1.get_arb_t())));
     BOOST_CHECK_EQUAL(a1.get_precision(),53);
+}
+
+BOOST_AUTO_TEST_CASE(arb_add_error_test)
+{
+    arb a0;
+    BOOST_CHECK_EQUAL(a0.get_radius(),0.);
+    a0.add_error(.1);
+    BOOST_CHECK(a0.get_radius() >= .1);
+    if (std::numeric_limits<double>::has_infinity) {
+        a0.add_error(std::numeric_limits<double>::infinity());
+        BOOST_CHECK(a0.get_radius() == std::numeric_limits<double>::infinity());
+    }
+    if (std::numeric_limits<double>::has_quiet_NaN) {
+        BOOST_CHECK_THROW(a0.add_error(std::numeric_limits<double>::quiet_NaN()),std::invalid_argument);
+    }
+    BOOST_CHECK_THROW(a0.add_error(-1.),std::invalid_argument);
+}
+
+BOOST_AUTO_TEST_CASE(arb_precision_test)
+{
+    arb a0{1};
+    a0.set_precision(30);
+    BOOST_CHECK_EQUAL(a0.get_precision(),30);
+    BOOST_CHECK_THROW(a0.set_precision(0),std::invalid_argument);
+    BOOST_CHECK_THROW(a0.set_precision(-1),std::invalid_argument);
+    BOOST_CHECK_EQUAL(a0.get_precision(),30);
+    BOOST_CHECK_EQUAL(a0.get_midpoint(),1.);
+}
+
+BOOST_AUTO_TEST_CASE(arb_get_arb_t_test)
+{
+    arb a0{1};
+    BOOST_CHECK(a0.get_arb_t() != nullptr);
+    BOOST_CHECK(static_cast<const arb &>(a0).get_arb_t() != nullptr);
+}
+
+BOOST_AUTO_TEST_CASE(arb_swap_test)
+{
+    arb a0{1}, a1{100};
+    a0.set_precision(30);
+    a0.add_error(.4);
+    a0.swap(a0);
+    BOOST_CHECK_EQUAL(a0.get_precision(),30);
+    BOOST_CHECK_EQUAL(a0.get_midpoint(),1.);
+    BOOST_CHECK(a0.get_radius() >= .4);
+    a0.swap(a1);
+    BOOST_CHECK_EQUAL(a1.get_precision(),30);
+    BOOST_CHECK_EQUAL(a1.get_midpoint(),1.);
+    BOOST_CHECK(a1.get_radius() >= .4);
+    BOOST_CHECK_EQUAL(a0.get_precision(),arb::get_default_precision());
+    BOOST_CHECK_EQUAL(a0.get_midpoint(),100.);
+    BOOST_CHECK(a0.get_radius() == 0.);
+}
+
+BOOST_AUTO_TEST_CASE(arb_stream_test)
+{
+    arb a0{123.456};
+    a0.add_error(.5);
+    std::ostringstream oss;
+    oss << a0;
+    BOOST_CHECK_EQUAL(oss.str(),"(1.2345600000000000e2 +/- 5.0000000093132257e-1)");
 }
 
 BOOST_AUTO_TEST_CASE(arb_arithmetic_test)

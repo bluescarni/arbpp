@@ -297,6 +297,15 @@ class arb: private detail::base_arb<>
         {
             return binary_add(a,x);
         }
+        // Subtraction.
+        void in_place_sub(const arb &other)
+        {
+            // Work with max precision.
+            if (other.m_prec > m_prec) {
+                m_prec = other.m_prec;
+            }
+            ::arb_sub(&m_arb,&m_arb,&other.m_arb,m_prec);
+        }
     public:
         /// Default precision.
         /**
