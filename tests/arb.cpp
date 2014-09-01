@@ -13,22 +13,6 @@
 
 using namespace arbpp;
 
-template <typename T, typename U = T, typename = void>
-struct is_addable
-{
-    static const bool value = false;
-};
-
-template <typename T, typename U>
-struct is_addable<T,U,typename std::enable_if<
-    std::is_same<
-    decltype(std::declval<T>() + std::declval<U>()),
-    decltype(std::declval<U>() + std::declval<T>())>::value
->::type>
-{
-    static const bool value = true;
-};
-
 BOOST_AUTO_TEST_CASE(arb_ctor_assignment_test)
 {
     // Some type-traits checks.
@@ -69,14 +53,41 @@ BOOST_AUTO_TEST_CASE(arb_ctor_assignment_test)
     BOOST_CHECK_EQUAL(a4.get_midpoint(),42.);
     BOOST_CHECK_EQUAL(a4.get_radius(),0.);
     BOOST_CHECK_EQUAL(a4.get_radius(),-0.);
-    // TODO test this, below as well.
-    //BOOST_CHECK_EQUAL(a4.get_precision(),arb::get_default_precision());
+    BOOST_CHECK_EQUAL(a4.get_precision(),arb::get_default_precision());
     BOOST_CHECK_EQUAL(arb{-42}.get_midpoint(),-42.);
     BOOST_CHECK_EQUAL(arb{-42}.get_radius(),0);
+    BOOST_CHECK_EQUAL(arb{-42}.get_precision(),arb::get_default_precision());
     BOOST_CHECK_EQUAL(arb{12u}.get_midpoint(),12.);
     BOOST_CHECK_EQUAL(arb{12ul}.get_radius(),0);
+    BOOST_CHECK_EQUAL(arb{12ul}.get_precision(),arb::get_default_precision());
     BOOST_CHECK_EQUAL(arb{1.3}.get_midpoint(),1.3);
     BOOST_CHECK_EQUAL(arb{1.3}.get_radius(),0.);
+    BOOST_CHECK_EQUAL(arb{1.3}.get_precision(),arb::get_default_precision());
+    // Copy assignment.
+    arb a5;
+    a5 = a4;
+    BOOST_CHECK_EQUAL(a5.get_midpoint(),42.);
+    BOOST_CHECK_EQUAL(a5.get_radius(),0.);
+    BOOST_CHECK_EQUAL(a5.get_precision(),arb::get_default_precision());
+    a4.set_precision(100);
+    a4.add_error(1);
+    a5 = a4;
+    BOOST_CHECK_EQUAL(a5.get_midpoint(),42.);
+    // NOTE: it seems that operations on mag_t, used to represent the radius,
+    // will not be exact, and that the results might be a few ulp away (but
+    // always producing strict upper or lower bounds). Just check that it is
+    // not zero.
+    BOOST_CHECK(a5.get_radius() != 0);
+    BOOST_CHECK_EQUAL(a5.get_precision(),100);
+    // Move assignment.
+    a4.set_precision(101);
+    a5 = std::move(a4);
+    BOOST_CHECK_EQUAL(a5.get_midpoint(),42.);
+    BOOST_CHECK(a5.get_radius() != 0);
+    BOOST_CHECK_EQUAL(a5.get_precision(),101);
+    BOOST_CHECK_EQUAL(a4.get_midpoint(),42.);
+    BOOST_CHECK(a4.get_radius() != 0);
+    BOOST_CHECK_EQUAL(a4.get_precision(),100);
     // Generic assignment.
     a1 = arb{0.5};
     a1.set_precision(100);
@@ -90,11 +101,7 @@ BOOST_AUTO_TEST_CASE(arb_ctor_assignment_test)
 
 BOOST_AUTO_TEST_CASE(arb_arithmetic_test)
 {
-    BOOST_CHECK(is_addable<arb>::value);
-    BOOST_CHECK((is_addable<arb,double>::value));
-    BOOST_CHECK((is_addable<double,arb>::value));
-    BOOST_CHECK((!is_addable<arb,long double>::value));
-    BOOST_CHECK((!is_addable<long double,arb>::value));
+
 }
 
 BOOST_AUTO_TEST_CASE(arb_base_test)
