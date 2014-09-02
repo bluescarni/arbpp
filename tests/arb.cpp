@@ -186,7 +186,13 @@ BOOST_AUTO_TEST_CASE(arb_stream_test)
 
 BOOST_AUTO_TEST_CASE(arb_arithmetic_test)
 {
-
+    arb a0{1}, a1{2};
+    a0 += a1;
+    BOOST_CHECK_EQUAL(a0.get_midpoint(),3.);
+    a1.set_precision(100);
+    a0 += a1;
+    BOOST_CHECK_EQUAL(a0.get_midpoint(),5.);
+    BOOST_CHECK_EQUAL(a0.get_precision(),100);
 }
 
 BOOST_AUTO_TEST_CASE(arb_base_test)

@@ -113,6 +113,10 @@ struct fmpr_raii
  * Move construction and move assignment will leave the moved-from object in an
  * unspecified but valid state.
  */
+// TODO:
+// - consider not using the precision member when printing. Instead, determine how many bits
+//   are necessary to represent exactly the floating-point type and use those instead when converting
+//   to mpfr for printing.
 class arb: private detail::base_arb<>
 {
         // Import locally the RAII names.
@@ -172,6 +176,7 @@ class arb: private detail::base_arb<>
         static void print_fmpr(std::ostream &os, ::fmpr_t f, long prec)
         {
             ::mpfr_t t;
+            // NOTE this cast should be checked if we change implementation here.
             ::mpfr_init2(t,static_cast< ::mpfr_prec_t>(prec));
             ::fmpr_get_mpfr(t,f,MPFR_RNDN);
             // Couple of variables used below.
