@@ -242,11 +242,42 @@ BOOST_AUTO_TEST_CASE(arb_arithmetic_test)
     BOOST_CHECK_EQUAL((2u + a2).get_midpoint(),5.);
     BOOST_CHECK_EQUAL((2u + a2).get_radius(),0.);
     BOOST_CHECK_EQUAL((2u + a2).get_precision(),arb::get_default_precision() + 20);
+    // With floating-point.
+    BOOST_CHECK_EQUAL((a2 + 1.f).get_midpoint(),4.);
+    BOOST_CHECK_EQUAL((a2 + 1.f).get_radius(),0.);
+    BOOST_CHECK_EQUAL((a2 + 1.f).get_precision(),arb::get_default_precision() + 20);
+    BOOST_CHECK_EQUAL((1.f + a2).get_midpoint(),4.);
+    BOOST_CHECK_EQUAL((1.f + a2).get_radius(),0.);
+    BOOST_CHECK_EQUAL((1.f + a2).get_precision(),arb::get_default_precision() + 20);
+    BOOST_CHECK_EQUAL((a2 + 2.).get_midpoint(),5.);
+    BOOST_CHECK_EQUAL((a2 + 2.).get_radius(),0.);
+    BOOST_CHECK_EQUAL((a2 + 2.).get_precision(),arb::get_default_precision() + 20);
+    BOOST_CHECK_EQUAL((2. + a2).get_midpoint(),5.);
+    BOOST_CHECK_EQUAL((2. + a2).get_radius(),0.);
+    BOOST_CHECK_EQUAL((2. + a2).get_precision(),arb::get_default_precision() + 20);
+}
+
+BOOST_AUTO_TEST_CASE(arb_negate_test)
+{
+    arb a0;
+    a0.negate();
+    BOOST_CHECK_EQUAL(a0.get_midpoint(),0.);
+    BOOST_CHECK_EQUAL(a0.get_radius(),0.);
+    a0 = 42;
+    a0.negate();
+    BOOST_CHECK_EQUAL(a0.get_midpoint(),-42.);
+    BOOST_CHECK_EQUAL(a0.get_radius(),0.);
+    a0.negate();
+    BOOST_CHECK_EQUAL(a0.get_midpoint(),42.);
+    BOOST_CHECK_EQUAL(a0.get_radius(),0.);
+    BOOST_CHECK_EQUAL(-a0.get_midpoint(),-42.);
+    BOOST_CHECK_EQUAL(-a0.get_radius(),0.);
+    BOOST_CHECK_EQUAL((-(-a0)).get_midpoint(),42.);
+    BOOST_CHECK_EQUAL((-(-a0)).get_radius(),0.);
 }
 
 BOOST_AUTO_TEST_CASE(arb_base_test)
 {
-    
     arb a0{20};
     a0 += 1;
     std::cout << a0 << '\n';

@@ -611,6 +611,24 @@ class arb: private detail::base_arb<>
         {
             return binary_add(a,b);
         }
+        /// Negation.
+        /**
+         * Negate in-place.
+         */
+        void negate()
+        {
+            ::arb_neg(&m_arb,&m_arb);
+        }
+        /// Negated copy.
+        /**
+         * @return a negated copy of \p this.
+         */
+        arb operator-() const
+        {
+            arb retval{*this};
+            retval.negate();
+            return retval;
+        }
         /// Cosine.
         /**
          * @return the cosine of \p this.
