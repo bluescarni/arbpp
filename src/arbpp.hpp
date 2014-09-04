@@ -113,10 +113,6 @@ struct fmpr_raii
  * Move construction and move assignment will leave the moved-from object in an
  * unspecified but valid state.
  */
-// TODO:
-// - consider not using the precision member when printing. Instead, determine how many bits
-//   are necessary to represent exactly the floating-point type and use those instead when converting
-//   to mpfr for printing.
 class arb: private detail::base_arb<>
 {
         // Import locally the RAII names.
@@ -173,10 +169,18 @@ class arb: private detail::base_arb<>
         // Smart pointer to handle the string output from mpfr.
         typedef std::unique_ptr<char,void (*)(char *)> smart_mpfr_str;
         // Utility function to print an fmpr to stream using mpfr. Will clear f on exit.
-        static void print_fmpr(std::ostream &os, ::fmpr_t f, long prec)
+        static void print_fmpr(std::ostream &os, ::fmpr_t f)
         {
             ::mpfr_t t;
-            // NOTE this cast should be checked if we change implementation here.
+            long prec = ::fmpr_bits(f);
+            if (prec < MPFR_PREC_MIN) {
+                prec = MPFR_PREC_MIN;
+            }
+            if (prec > MPFR_PREC_MAX) {
+                prec = MPFR_PREC_MAX;
+            }
+            // NOTE: here we are (reasonably) assuming that MPFR_MIN/MAX
+            // fall within the range of ::mpfr_prec_t.
             ::mpfr_init2(t,static_cast< ::mpfr_prec_t>(prec));
             ::fmpr_get_mpfr(t,f,MPFR_RNDN);
             // Couple of variables used below.
@@ -207,21 +211,21 @@ class arb: private detail::base_arb<>
             }
             os << cpp_str;
         }
-        static void print_arf(std::ostream &os, const ::arf_t a, long prec)
+        static void print_arf(std::ostream &os, const ::arf_t a)
         {
             // Go through the conversion chain arf -> fmpr -> mpfr.
             ::fmpr_t f;
             ::fmpr_init(f);
             ::arf_get_fmpr(f,a);
-            print_fmpr(os,f,prec);
+            print_fmpr(os,f);
         }
-        static void print_mag(std::ostream &os, const ::mag_t m, long prec)
+        static void print_mag(std::ostream &os, const ::mag_t m)
         {
             // Go through the conversion chain mag -> fmpr -> mpfr.
             ::fmpr_t f;
             ::fmpr_init(f);
             ::mag_get_fmpr(f,m);
-            print_fmpr(os,f,prec);
+            print_fmpr(os,f);
         }
         // Generic constructor.
         template <typename T, typename std::enable_if<is_arb_int<T>::value,int>::type = 0>
@@ -528,10 +532,10 @@ class arb: private detail::base_arb<>
         {
             os << '(';
             // First print the arf.
-            print_arf(os,arb_midref(&a.m_arb),a.m_prec);
+            print_arf(os,arb_midref(&a.m_arb));
             os << " +/- ";
             // Now print the mag.
-            print_mag(os,arb_radref(&a.m_arb),a.m_prec);
+            print_mag(os,arb_radref(&a.m_arb));
             os << ')';
             return os;
         }
