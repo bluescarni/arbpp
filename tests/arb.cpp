@@ -255,6 +255,39 @@ BOOST_AUTO_TEST_CASE(arb_arithmetic_test)
     BOOST_CHECK_EQUAL((2. + a2).get_midpoint(),5.);
     BOOST_CHECK_EQUAL((2. + a2).get_radius(),0.);
     BOOST_CHECK_EQUAL((2. + a2).get_precision(),arb::get_default_precision() + 20);
+    // In-place subtraction.
+    a0.set_precision(arb::get_default_precision());
+    a0 = 1;
+    a1.set_precision(arb::get_default_precision());
+    a1 = 2;
+    a0 -= a1;
+    BOOST_CHECK_EQUAL(a0.get_midpoint(),-1.);
+    BOOST_CHECK_EQUAL(a0.get_radius(),0.);
+    BOOST_CHECK_EQUAL(a0.get_precision(),arb::get_default_precision());
+    // Try with different precisions.
+    a1.set_precision(arb::get_default_precision() + 10);
+    a0 -= a1;
+    BOOST_CHECK_EQUAL(a0.get_midpoint(),-3.);
+    BOOST_CHECK_EQUAL(a0.get_radius(),0.);
+    BOOST_CHECK_EQUAL(a0.get_precision(),arb::get_default_precision() + 10);
+    // With plain int and unsigned.
+    a0 -= 1;
+    BOOST_CHECK_EQUAL(a0.get_midpoint(),-4.);
+    BOOST_CHECK_EQUAL(a0.get_radius(),0.);
+    BOOST_CHECK_EQUAL(a0.get_precision(),arb::get_default_precision() + 10);
+    a0 -= 1u;
+    BOOST_CHECK_EQUAL(a0.get_midpoint(),-5.);
+    BOOST_CHECK_EQUAL(a0.get_radius(),0.);
+    BOOST_CHECK_EQUAL(a0.get_precision(),arb::get_default_precision() + 10);
+    // Float and double.
+    a0 -= 1.f;
+    BOOST_CHECK_EQUAL(a0.get_midpoint(),-6.);
+    BOOST_CHECK_EQUAL(a0.get_radius(),0.);
+    BOOST_CHECK_EQUAL(a0.get_precision(),arb::get_default_precision() + 10);
+    a0 -= 2.;
+    BOOST_CHECK_EQUAL(a0.get_midpoint(),-8.);
+    BOOST_CHECK_EQUAL(a0.get_radius(),0.);
+    BOOST_CHECK_EQUAL(a0.get_precision(),arb::get_default_precision() + 10);
 }
 
 BOOST_AUTO_TEST_CASE(arb_negate_test)

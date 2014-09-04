@@ -335,6 +335,25 @@ class arb: private detail::base_arb<>
             }
             ::arb_sub(&m_arb,&m_arb,&other.m_arb,m_prec);
         }
+        template <typename T, typename std::enable_if<is_arb_int<T>::value,int>::type = 0>
+        void in_place_sub(const T &n)
+        {
+            ::arb_sub_si(&m_arb,&m_arb,static_cast<long>(n),m_prec);
+        }
+        template <typename T, typename std::enable_if<is_arb_uint<T>::value,int>::type = 0>
+        void in_place_sub(const T &n)
+        {
+            ::arb_sub_ui(&m_arb,&m_arb,static_cast<unsigned long>(n),m_prec);
+        }
+        template <typename T, typename std::enable_if<is_arb_float<T>::value,int>::type = 0>
+        void in_place_sub(const T &x)
+        {
+            arf_raii tmp_arf;
+            // Set tmp_arf *exactly* to x.
+            ::arf_set_d(&tmp_arf.m_arf,static_cast<double>(x));
+            // Sub with precision m_prec.
+            ::arb_sub_arf(&m_arb,&m_arb,&tmp_arf.m_arf,m_prec);
+        }
     public:
         /// Default precision.
         /**
@@ -628,6 +647,27 @@ class arb: private detail::base_arb<>
             arb retval{*this};
             retval.negate();
             return retval;
+        }
+        /// In-place subtraction.
+        /**
+         * \note
+         * This operator is enabled only if \p T is an \ref interop "interoperable type"
+         * or arbpp::arb.
+         * 
+         * This method will set \p this to <tt>this - x</tt>. In case \p T is arbpp::arb, then
+         * the operation is carried out with a precision corresponding to the maximum between
+         * the precisions of \p this and \p x. Otherwise, the operation is carried out with the
+         * precision of \p this.
+         * 
+         * @param[in] x subtraction argument.
+         * 
+         * @return reference to \p this.
+         */
+        template <typename T, typename std::enable_if<is_unary_arithmetic_type<T>::value,int>::type = 0>
+        arb &operator-=(const T &x)
+        {
+            in_place_sub(x);
+            return *this;
         }
         /// Cosine.
         /**
