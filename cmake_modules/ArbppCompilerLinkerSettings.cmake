@@ -1,10 +1,16 @@
 INCLUDE(CheckCXXCompilerFlag)
 
+message(STATUS "The C++ compiler ID is: ${CMAKE_CXX_COMPILER_ID}")
+
 # Clang detection:
 # http://stackoverflow.com/questions/10046114/in-cmake-how-can-i-test-if-the-compiler-is-clang
 # http://www.cmake.org/cmake/help/v2.8.10/cmake.html#variable:CMAKE_LANG_COMPILER_ID
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     set(CMAKE_COMPILER_IS_CLANGXX 1)
+endif()
+
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
+    set(CMAKE_COMPILER_IS_INTELXX 1)
 endif()
 
 macro(ARBPP_CHECK_ENABLE_CXX_FLAG flag)
@@ -43,6 +49,7 @@ if(CMAKE_COMPILER_IS_GNUCXX)
     ARBPP_CHECK_ENABLE_CXX_FLAG(-fdiagnostics-color=auto)
 endif()
 
+# Configuration for Clang.
 if(CMAKE_COMPILER_IS_CLANGXX)
     message(STATUS "Clang compiler detected, checking version.")
     try_compile(CLANG_VERSION_CHECK ${CMAKE_BINARY_DIR} "${CMAKE_SOURCE_DIR}/cmake_modules/clang_check_version.cpp")
@@ -51,8 +58,17 @@ if(CMAKE_COMPILER_IS_CLANGXX)
     endif()
 endif()
 
-# Common configuration for GCC and Clang.
-if(CMAKE_COMPILER_IS_CLANGXX OR CMAKE_COMPILER_IS_GNUCXX)
+# Configuration for the Intel compiler.
+if(CMAKE_COMPILER_IS_INTELXX)
+    message(STATUS "Intel compiler detected, checking version.")
+    try_compile(INTEL_VERSION_CHECK ${CMAKE_BINARY_DIR} "${CMAKE_SOURCE_DIR}/cmake_modules/intel_check_version.cpp")
+    if(NOT INTEL_VERSION_CHECK)
+        MESSAGE(FATAL_ERROR "Unsupported Intel compiler version, please upgrade your compiler.")
+    endif()
+endif()
+
+# Common configuration for GCC, Clang and Intel.
+if(CMAKE_COMPILER_IS_CLANGXX OR CMAKE_COMPILER_IS_GNUCXX OR CMAKE_COMPILER_IS_INTELXX)
     # Enable the C++11 flag. Need to check for either c++0x or c++11.
     check_cxx_compiler_flag("-std=c++11" ARBPP_CHECK_CPP11_FLAG)
     if(ARBPP_CHECK_CPP11_FLAG)
