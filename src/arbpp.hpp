@@ -173,6 +173,10 @@ class arb: private detail::base_arb<>
         {
             ::mpfr_t t;
             long prec = ::fmpr_bits(f);
+            // NOTE: here we need to make sure the precision from arb
+            // is compatible with the mpfr bounds. We could raise an error,
+            // but probably it's better to print something with the "wrong"
+            // number of digits rather than bombing out.
             if (prec < MPFR_PREC_MIN) {
                 prec = MPFR_PREC_MIN;
             }
@@ -536,8 +540,6 @@ class arb: private detail::base_arb<>
         /**
          * This function will print to stream a human-readable representation
          * of \p a.
-         * The number of decimal digits that will be displayed depends on
-         * the precision value associated to \p a.
          * 
          * @param[in,out] os target stream.
          * @param[in] a arbpp::arb to be streamed.
