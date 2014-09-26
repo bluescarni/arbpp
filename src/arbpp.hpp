@@ -352,6 +352,65 @@ class arb: private detail::base_arb<>
             ::arb_sub_arf(&m_arb,&m_arb,&tmp_arf.m_arf,m_prec);
             return *this;
         }
+        static arb binary_sub(const arb &a, const arb &b)
+        {
+            arb retval;
+            // Set max precision.
+            if (a.m_prec > b.m_prec) {
+                retval.m_prec = a.m_prec;
+            } else {
+                retval.m_prec = b.m_prec;
+            }
+            ::arb_sub(&retval.m_arb,&a.m_arb,&b.m_arb,retval.m_prec);
+            return retval;
+        }
+        template <typename T, typename std::enable_if<is_arb_int<T>::value,int>::type = 0>
+        static arb binary_sub(const arb &a, const T &n)
+        {
+            arb retval;
+            ::arb_sub_si(&retval.m_arb,&a.m_arb,static_cast<long>(n),a.m_prec);
+            retval.m_prec = a.m_prec;
+            return retval;
+        }
+        template <typename T, typename std::enable_if<is_arb_int<T>::value,int>::type = 0>
+        static arb binary_sub(const T &n, const arb &a)
+        {
+            auto retval = binary_sub(a,n);
+            retval.negate();
+            return retval;
+        }
+        template <typename T, typename std::enable_if<is_arb_uint<T>::value,int>::type = 0>
+        static arb binary_sub(const arb &a, const T &n)
+        {
+            arb retval;
+            ::arb_sub_ui(&retval.m_arb,&a.m_arb,static_cast<unsigned long>(n),a.m_prec);
+            retval.m_prec = a.m_prec;
+            return retval;
+        }
+        template <typename T, typename std::enable_if<is_arb_uint<T>::value,int>::type = 0>
+        static arb binary_sub(const T &n, const arb &a)
+        {
+            auto retval = binary_sub(a,n);
+            retval.negate();
+            return retval;
+        }
+        template <typename T, typename std::enable_if<is_arb_float<T>::value,int>::type = 0>
+        static arb binary_sub(const arb &a, const T &x)
+        {
+            arb retval;
+            arf_raii tmp_arf;
+            ::arf_set_d(&tmp_arf.m_arf,static_cast<double>(x));
+            ::arb_sub_arf(&retval.m_arb,&a.m_arb,&tmp_arf.m_arf,a.m_prec);
+            retval.m_prec = a.m_prec;
+            return retval;
+        }
+        template <typename T, typename std::enable_if<is_arb_float<T>::value,int>::type = 0>
+        static arb binary_sub(const T &x, const arb &a)
+        {
+            auto retval = binary_sub(a,x);
+            retval.negate();
+            return retval;
+        }
     public:
         /// Default precision.
         /**
@@ -686,6 +745,29 @@ class arb: private detail::base_arb<>
         auto operator-=(const T &x) -> decltype(this->in_place_sub(x))
         {
             return in_place_sub(x);
+        }
+        /// Generic binary subtraction involving arbpp::arb.
+        /**
+         * \note
+         * This template operator is enabled only if either:
+         * - \p T is arbpp::arb and \p U is an \ref interop "interoperable type",
+         * - \p U is arbpp::arb and \p T is an \ref interop "interoperable type",
+         * - both \p T and \p U are arbpp::arb.
+         * 
+         * This method will compute <tt>a - b</tt> and return it as an arbpp::arb. In case \p T and \p U are both
+         * arbpp::arb, then the operation is carried out with a precision corresponding to the maximum between
+         * the precisions of \p a and \p b. Otherwise, the result will have the precision of the
+         * arbpp::arb argument.
+         * 
+         * @param[in] a first operand.
+         * @param[in] b second operand.
+         * 
+         * @return <tt>a - b</tt>.
+         */
+        template <typename T, typename U>
+        friend auto operator-(const T &a, const U &b) -> decltype(arb::binary_sub(a,b))
+        {
+            return binary_sub(a,b);
         }
         /// Cosine.
         /**
