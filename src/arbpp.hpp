@@ -488,6 +488,33 @@ class arb: private detail::base_arb<>
             // Round-set self.
             ::arb_set_round(&m_arb,&m_arb,m_prec);
         }
+        /// Constructor from string.
+        /**
+         * This constructor will set the midpoint to a value represented
+         * by the string \p str and rounded to a precision of \p prec. The expected string format
+         * is the same described in the MPFR documentation. The radius will be set to zero.
+         * 
+         * @param[in] str string used for construction.
+         * @param[in] prec desired precision.
+         * 
+         * @throws unspecified any exception thrown by arb::set_precision().
+         */
+        arb(const std::string &str, long prec = arb::get_default_precision())
+        {
+            // Set precision and construct empty instance.
+            set_precision(prec);
+            ::arb_init(&m_arb);
+            // Try to parse an mpfr from the input string.
+            ::mpfr_t t;
+            ::mpfr_init2(t,prec);
+            const int retval = ::mpfr_set_str(t,str.c_str(),10,MPFR_RNDN);
+            if (retval != 0) {
+                ::mpfr_clear(t);
+                throw std::invalid_argument("invalid string input");
+            }
+            ::arf_set_mpfr(arb_midref(&m_arb),t);
+            ::mpfr_clear(t);
+        }
         /// Destructor.
         ~arb()
         {
@@ -807,6 +834,35 @@ inline void swap(arb &a0, arb &a1) noexcept
 {
     a0.swap(a1);
 }
+
+// NOTE: user-defined literals are supported from GCC 4.7 onwards.
+#if defined(__INTEL_COMPILER) || defined(__clang__)  || \
+    (defined(__GNUC__) && (__GNUC__  > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 7)))
+
+#define ARBPP_HAS_USER_DEFINED_LITERALS
+
+inline namespace literals
+{
+
+/// Literal for arbpp::arb.
+/**
+ * The return value will be constructed with the default precision.
+ *
+ * @param[in] s literal string.
+ *
+ * @return an arbpp::arb constructed from \p s.
+ *
+ * @throws unspecified any exception thrown by the constructor of
+ * arbpp::arb from string.
+ */
+inline arb operator "" _arb(const char *s)
+{
+    return arb(s);
+}
+
+}
+
+#endif
 
 }
 

@@ -23,6 +23,7 @@
 #define BOOST_TEST_MODULE arb_test
 #include <boost/test/unit_test.hpp>
 
+#include <cmath>
 #include <limits>
 #include <sstream>
 #include <stdexcept>
@@ -93,6 +94,25 @@ BOOST_AUTO_TEST_CASE(arb_ctor_assignment_test)
     BOOST_CHECK_EQUAL((arb{-42,arb::get_default_precision() - 1}.get_midpoint()),-42.);
     BOOST_CHECK_EQUAL((arb{-42,arb::get_default_precision() - 1}.get_radius()),0);
     BOOST_CHECK_EQUAL((arb{-42,arb::get_default_precision() - 1}.get_precision()),arb::get_default_precision() - 1);
+    // Constructor from string.
+    BOOST_CHECK_EQUAL((arb{"-42"}.get_midpoint()),-42.);
+    BOOST_CHECK_EQUAL(arb{"-42"}.get_radius(),0.);
+    BOOST_CHECK_EQUAL(arb{"-42"}.get_precision(),arb::get_default_precision());
+    BOOST_CHECK_EQUAL((arb{"-42",arb::get_default_precision() + 1}.get_midpoint()),-42.);
+    BOOST_CHECK_EQUAL((arb{"-42",arb::get_default_precision() + 1}).get_radius(),0.);
+    BOOST_CHECK_EQUAL((arb{"-42",arb::get_default_precision() + 1}).get_precision(),arb::get_default_precision() + 1);
+    BOOST_CHECK_EQUAL((arb{"-1.234e3"}.get_midpoint()),-1234.);
+    BOOST_CHECK_EQUAL((arb{"-1.234e3"}.get_radius()),0.);
+    BOOST_CHECK_EQUAL(arb{"-42"}.get_radius(),0.);
+    if (std::numeric_limits<double>::has_infinity && std::numeric_limits<double>::has_quiet_NaN) {
+        BOOST_CHECK_EQUAL(arb{"inf"}.get_midpoint(),std::numeric_limits<double>::infinity());
+        BOOST_CHECK_EQUAL(arb{"-inf"}.get_midpoint(),-std::numeric_limits<double>::infinity());
+        BOOST_CHECK(std::isnan(arb{"nan"}.get_midpoint()));
+        BOOST_CHECK(std::isnan(arb{"-nan"}.get_midpoint()));
+    }
+    // Check errors.
+    BOOST_CHECK_THROW(arb{"ssasda"},std::invalid_argument);
+    BOOST_CHECK_THROW((arb{"ssasda",arb::get_default_precision() + 1}),std::invalid_argument);
     // Copy assignment.
     arb a5;
     a5 = a4;
@@ -384,6 +404,20 @@ BOOST_AUTO_TEST_CASE(arb_negate_test)
     BOOST_CHECK_EQUAL((-(-a0)).get_radius(),0.);
 }
 
+#if defined(ARBPP_HAS_USER_DEFINED_LITERALS)
+
+BOOST_AUTO_TEST_CASE(arb_udl_test)
+{
+    BOOST_CHECK_EQUAL((1.23456_arb).get_midpoint(),arb{"1.23456"}.get_midpoint());
+    BOOST_CHECK_EQUAL((1.23456_arb).get_radius(),arb{"1.23456"}.get_radius());
+    BOOST_CHECK_EQUAL((-1.23456_arb).get_midpoint(),arb{"-1.23456"}.get_midpoint());
+    BOOST_CHECK_EQUAL((-1.23456_arb).get_radius(),arb{"-1.23456"}.get_radius());
+    BOOST_CHECK_EQUAL((1.234e3_arb).get_midpoint(),arb{1234}.get_midpoint());
+    BOOST_CHECK_EQUAL((1.234e3_arb).get_radius(),arb{1234}.get_radius());
+}
+
+#endif
+
 BOOST_AUTO_TEST_CASE(arb_base_test)
 {
     arb a0{20};
@@ -405,6 +439,8 @@ BOOST_AUTO_TEST_CASE(arb_base_test)
     a0.add_error(1./0.);
     std::cout << a0 << '\n';
     a0.get_midpoint();
+    std::cout << arb{".1"} << '\n';
+    std::cout << arb{"1.23456",145} << '\n';
 }
 
 // Keep this for last, in order to have proper
