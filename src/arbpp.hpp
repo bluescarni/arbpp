@@ -99,8 +99,8 @@ struct fmpr_raii
  * \section interop Interoperability with fundamental types
  * 
  * Interoperability with the following types is provided:
- * - <tt>signed char</tt>, \p short, \p int, \p long and unsigned counterparts,
- * - \p char, \p float and \p double.
+ * - \p char, <tt>signed char</tt>, \p short, \p int, \p long and unsigned counterparts,
+ * - \p float and \p double.
  * 
  * \section exception_safety Exception safety guarantee
  * 
@@ -410,6 +410,30 @@ class arb: private detail::base_arb<>
         {
             ::arb_init(&m_arb);
             construct(x);
+        }
+        /// Generic constructor with precision.
+        /**
+         * \note
+         * This constructor is enabled only if \p T is an \ref interop "interoperable type".
+         * 
+         * This constructor will first initialise \p this to \p x, and then it will round \p this
+         * to the precision \p prec. The precision of \p this will also be set to \p prec.
+         * 
+         * @param[in] x construction argument.
+         * @param[in] prec desired precision.
+         * 
+         * @throws unspecified any exception thrown by arb::set_precision().
+         */
+        template <typename T, typename std::enable_if<is_interoperable<T>::value,int>::type = 0>
+        explicit arb(const T &x, long prec)
+        {
+            // Set the precision value, with error checking.
+            set_precision(prec);
+            // Construct as usual.
+            ::arb_init(&m_arb);
+            construct(x);
+            // Round-set self.
+            ::arb_set_round(&m_arb,&m_arb,m_prec);
         }
         /// Destructor.
         ~arb()

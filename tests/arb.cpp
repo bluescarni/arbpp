@@ -86,6 +86,13 @@ BOOST_AUTO_TEST_CASE(arb_ctor_assignment_test)
     BOOST_CHECK_EQUAL(arb{1.3}.get_midpoint(),1.3);
     BOOST_CHECK_EQUAL(arb{1.3}.get_radius(),0.);
     BOOST_CHECK_EQUAL(arb{1.3}.get_precision(),arb::get_default_precision());
+    // Generic constructor from precision.
+    BOOST_CHECK_EQUAL((arb{-42,arb::get_default_precision() + 1}.get_midpoint()),-42.);
+    BOOST_CHECK_EQUAL((arb{-42,arb::get_default_precision() + 1}.get_radius()),0);
+    BOOST_CHECK_EQUAL((arb{-42,arb::get_default_precision() + 1}.get_precision()),arb::get_default_precision() + 1);
+    BOOST_CHECK_EQUAL((arb{-42,arb::get_default_precision() - 1}.get_midpoint()),-42.);
+    BOOST_CHECK_EQUAL((arb{-42,arb::get_default_precision() - 1}.get_radius()),0);
+    BOOST_CHECK_EQUAL((arb{-42,arb::get_default_precision() - 1}.get_precision()),arb::get_default_precision() - 1);
     // Copy assignment.
     arb a5;
     a5 = a4;
