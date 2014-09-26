@@ -96,6 +96,9 @@ BOOST_AUTO_TEST_CASE(arb_ctor_assignment_test)
     BOOST_CHECK_EQUAL((arb{-42,arb::get_default_precision() - 1}.get_precision()),arb::get_default_precision() - 1);
     // Constructor from string.
     BOOST_CHECK_EQUAL((arb{"-42"}.get_midpoint()),-42.);
+    BOOST_CHECK_EQUAL((arb{"42"}.get_midpoint()),42.);
+    BOOST_CHECK_EQUAL((arb{"+42"}.get_midpoint()),42.);
+    BOOST_CHECK_EQUAL((arb{" -42"}.get_midpoint()),-42.);
     BOOST_CHECK_EQUAL(arb{"-42"}.get_radius(),0.);
     BOOST_CHECK_EQUAL(arb{"-42"}.get_precision(),arb::get_default_precision());
     BOOST_CHECK_EQUAL((arb{"-42",arb::get_default_precision() + 1}.get_midpoint()),-42.);
@@ -113,6 +116,7 @@ BOOST_AUTO_TEST_CASE(arb_ctor_assignment_test)
     // Check errors.
     BOOST_CHECK_THROW(arb{"ssasda"},std::invalid_argument);
     BOOST_CHECK_THROW((arb{"ssasda",arb::get_default_precision() + 1}),std::invalid_argument);
+    BOOST_CHECK_THROW(arb{"42 "},std::invalid_argument);
     // Copy assignment.
     arb a5;
     a5 = a4;

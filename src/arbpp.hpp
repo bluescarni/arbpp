@@ -492,7 +492,8 @@ class arb: private detail::base_arb<>
         /**
          * This constructor will set the midpoint to a value represented
          * by the string \p str and rounded to a precision of \p prec. The expected string format
-         * is the same described in the MPFR documentation. The radius will be set to zero.
+         * is the same described in the MPFR documentation, and base 10 representation is assumed.
+         * The radius will be set to zero.
          * 
          * @param[in] str string used for construction.
          * @param[in] prec desired precision.
