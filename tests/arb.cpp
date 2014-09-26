@@ -202,29 +202,35 @@ BOOST_AUTO_TEST_CASE(arb_arithmetic_test)
     // Try with different precisions.
     a1.set_precision(arb::get_default_precision() + 10);
     a0 += a1;
+    BOOST_CHECK((std::is_same<arb &,decltype(a0 += a1)>::value));
     BOOST_CHECK_EQUAL(a0.get_midpoint(),5.);
     BOOST_CHECK_EQUAL(a0.get_radius(),0.);
     BOOST_CHECK_EQUAL(a0.get_precision(),arb::get_default_precision() + 10);
     // With plain int and unsigned.
     a0 += 1;
+    BOOST_CHECK((std::is_same<arb &,decltype(a0 += 1)>::value));
     BOOST_CHECK_EQUAL(a0.get_midpoint(),6.);
     BOOST_CHECK_EQUAL(a0.get_radius(),0.);
     BOOST_CHECK_EQUAL(a0.get_precision(),arb::get_default_precision() + 10);
     a0 += 1u;
+    BOOST_CHECK((std::is_same<arb &,decltype(a0 += 1u)>::value));
     BOOST_CHECK_EQUAL(a0.get_midpoint(),7.);
     BOOST_CHECK_EQUAL(a0.get_radius(),0.);
     BOOST_CHECK_EQUAL(a0.get_precision(),arb::get_default_precision() + 10);
     // Float and double.
     a0 += 1.f;
+    BOOST_CHECK((std::is_same<arb &,decltype(a0 += 1.f)>::value));
     BOOST_CHECK_EQUAL(a0.get_midpoint(),8.);
     BOOST_CHECK_EQUAL(a0.get_radius(),0.);
     BOOST_CHECK_EQUAL(a0.get_precision(),arb::get_default_precision() + 10);
     a0 += 2.;
+    BOOST_CHECK((std::is_same<arb &,decltype(a0 += 2.)>::value));
     BOOST_CHECK_EQUAL(a0.get_midpoint(),10.);
     BOOST_CHECK_EQUAL(a0.get_radius(),0.);
     BOOST_CHECK_EQUAL(a0.get_precision(),arb::get_default_precision() + 10);
     // Binary add.
     arb a2{3}, a3{-4};
+    BOOST_CHECK((std::is_same<arb,decltype(a2 + a3)>::value));
     BOOST_CHECK_EQUAL((a2 + a3).get_midpoint(),-1.);
     BOOST_CHECK_EQUAL((a2 + a3).get_radius(),0.);
     BOOST_CHECK_EQUAL((a2 + a3).get_precision(),arb::get_default_precision());
@@ -237,12 +243,16 @@ BOOST_AUTO_TEST_CASE(arb_arithmetic_test)
     BOOST_CHECK_EQUAL((a3 + a2).get_radius(),0.);
     BOOST_CHECK_EQUAL((a3 + a2).get_precision(),arb::get_default_precision() + 20);
     // With int and unsigned.
+    BOOST_CHECK((std::is_same<arb,decltype(a2 + 1)>::value));
+    BOOST_CHECK((std::is_same<arb,decltype(1 + a2)>::value));
     BOOST_CHECK_EQUAL((a2 + 1).get_midpoint(),4.);
     BOOST_CHECK_EQUAL((a2 + 1).get_radius(),0.);
     BOOST_CHECK_EQUAL((a2 + 1).get_precision(),arb::get_default_precision() + 20);
     BOOST_CHECK_EQUAL((1 + a2).get_midpoint(),4.);
     BOOST_CHECK_EQUAL((1 + a2).get_radius(),0.);
     BOOST_CHECK_EQUAL((1 + a2).get_precision(),arb::get_default_precision() + 20);
+    BOOST_CHECK((std::is_same<arb,decltype(a2 + 2u)>::value));
+    BOOST_CHECK((std::is_same<arb,decltype(2u + a2)>::value));
     BOOST_CHECK_EQUAL((a2 + 2u).get_midpoint(),5.);
     BOOST_CHECK_EQUAL((a2 + 2u).get_radius(),0.);
     BOOST_CHECK_EQUAL((a2 + 2u).get_precision(),arb::get_default_precision() + 20);
@@ -250,12 +260,16 @@ BOOST_AUTO_TEST_CASE(arb_arithmetic_test)
     BOOST_CHECK_EQUAL((2u + a2).get_radius(),0.);
     BOOST_CHECK_EQUAL((2u + a2).get_precision(),arb::get_default_precision() + 20);
     // With floating-point.
+    BOOST_CHECK((std::is_same<arb,decltype(a2 + 1.f)>::value));
+    BOOST_CHECK((std::is_same<arb,decltype(1.f + a2)>::value));
     BOOST_CHECK_EQUAL((a2 + 1.f).get_midpoint(),4.);
     BOOST_CHECK_EQUAL((a2 + 1.f).get_radius(),0.);
     BOOST_CHECK_EQUAL((a2 + 1.f).get_precision(),arb::get_default_precision() + 20);
     BOOST_CHECK_EQUAL((1.f + a2).get_midpoint(),4.);
     BOOST_CHECK_EQUAL((1.f + a2).get_radius(),0.);
     BOOST_CHECK_EQUAL((1.f + a2).get_precision(),arb::get_default_precision() + 20);
+    BOOST_CHECK((std::is_same<arb,decltype(a2 + 2.)>::value));
+    BOOST_CHECK((std::is_same<arb,decltype(2. + a2)>::value));
     BOOST_CHECK_EQUAL((a2 + 2.).get_midpoint(),5.);
     BOOST_CHECK_EQUAL((a2 + 2.).get_radius(),0.);
     BOOST_CHECK_EQUAL((a2 + 2.).get_precision(),arb::get_default_precision() + 20);
@@ -268,6 +282,7 @@ BOOST_AUTO_TEST_CASE(arb_arithmetic_test)
     a1.set_precision(arb::get_default_precision());
     a1 = 2;
     a0 -= a1;
+    BOOST_CHECK((std::is_same<arb &,decltype(a0 -= a1)>::value));
     BOOST_CHECK_EQUAL(a0.get_midpoint(),-1.);
     BOOST_CHECK_EQUAL(a0.get_radius(),0.);
     BOOST_CHECK_EQUAL(a0.get_precision(),arb::get_default_precision());
@@ -279,25 +294,30 @@ BOOST_AUTO_TEST_CASE(arb_arithmetic_test)
     BOOST_CHECK_EQUAL(a0.get_precision(),arb::get_default_precision() + 10);
     // With plain int and unsigned.
     a0 -= 1;
+    BOOST_CHECK((std::is_same<arb &,decltype(a0 -= 1)>::value));
     BOOST_CHECK_EQUAL(a0.get_midpoint(),-4.);
     BOOST_CHECK_EQUAL(a0.get_radius(),0.);
     BOOST_CHECK_EQUAL(a0.get_precision(),arb::get_default_precision() + 10);
     a0 -= 1u;
+    BOOST_CHECK((std::is_same<arb &,decltype(a0 -= 1u)>::value));
     BOOST_CHECK_EQUAL(a0.get_midpoint(),-5.);
     BOOST_CHECK_EQUAL(a0.get_radius(),0.);
     BOOST_CHECK_EQUAL(a0.get_precision(),arb::get_default_precision() + 10);
     // Float and double.
     a0 -= 1.f;
+    BOOST_CHECK((std::is_same<arb &,decltype(a0 -= 1.f)>::value));
     BOOST_CHECK_EQUAL(a0.get_midpoint(),-6.);
     BOOST_CHECK_EQUAL(a0.get_radius(),0.);
     BOOST_CHECK_EQUAL(a0.get_precision(),arb::get_default_precision() + 10);
     a0 -= 2.;
+    BOOST_CHECK((std::is_same<arb &,decltype(a0 -= 2.)>::value));
     BOOST_CHECK_EQUAL(a0.get_midpoint(),-8.);
     BOOST_CHECK_EQUAL(a0.get_radius(),0.);
     BOOST_CHECK_EQUAL(a0.get_precision(),arb::get_default_precision() + 10);
     // Binary sub.
     a2 = arb{3};
     a3 = arb{4};
+    BOOST_CHECK((std::is_same<arb,decltype(a2 - a3)>::value));
     BOOST_CHECK_EQUAL((a2 - a3).get_midpoint(),-1.);
     BOOST_CHECK_EQUAL((a2 - a3).get_radius(),0.);
     BOOST_CHECK_EQUAL((a2 - a3).get_precision(),arb::get_default_precision());
@@ -310,12 +330,16 @@ BOOST_AUTO_TEST_CASE(arb_arithmetic_test)
     BOOST_CHECK_EQUAL((a3 - a2).get_radius(),0.);
     BOOST_CHECK_EQUAL((a3 - a2).get_precision(),arb::get_default_precision() + 20);
     // With int and unsigned.
+    BOOST_CHECK((std::is_same<arb,decltype(a2 - 1)>::value));
+    BOOST_CHECK((std::is_same<arb,decltype(1 - a2)>::value));
     BOOST_CHECK_EQUAL((a2 - 1).get_midpoint(),2.);
     BOOST_CHECK_EQUAL((a2 - 1).get_radius(),0.);
     BOOST_CHECK_EQUAL((a2 - 1).get_precision(),arb::get_default_precision() + 20);
     BOOST_CHECK_EQUAL((1 - a2).get_midpoint(),-2.);
     BOOST_CHECK_EQUAL((1 - a2).get_radius(),0.);
     BOOST_CHECK_EQUAL((1 - a2).get_precision(),arb::get_default_precision() + 20);
+    BOOST_CHECK((std::is_same<arb,decltype(a2 - 2u)>::value));
+    BOOST_CHECK((std::is_same<arb,decltype(2u - a2)>::value));
     BOOST_CHECK_EQUAL((a2 - 2u).get_midpoint(),1.);
     BOOST_CHECK_EQUAL((a2 - 2u).get_radius(),0.);
     BOOST_CHECK_EQUAL((a2 - 2u).get_precision(),arb::get_default_precision() + 20);
@@ -323,12 +347,16 @@ BOOST_AUTO_TEST_CASE(arb_arithmetic_test)
     BOOST_CHECK_EQUAL((2u - a2).get_radius(),0.);
     BOOST_CHECK_EQUAL((2u - a2).get_precision(),arb::get_default_precision() + 20);
     // With floating-point.
+    BOOST_CHECK((std::is_same<arb,decltype(a2 - 1.f)>::value));
+    BOOST_CHECK((std::is_same<arb,decltype(1.f - a2)>::value));
     BOOST_CHECK_EQUAL((a2 - 1.f).get_midpoint(),2.);
     BOOST_CHECK_EQUAL((a2 - 1.f).get_radius(),0.);
     BOOST_CHECK_EQUAL((a2 - 1.f).get_precision(),arb::get_default_precision() + 20);
     BOOST_CHECK_EQUAL((1.f - a2).get_midpoint(),-2.);
     BOOST_CHECK_EQUAL((1.f - a2).get_radius(),0.);
     BOOST_CHECK_EQUAL((1.f - a2).get_precision(),arb::get_default_precision() + 20);
+    BOOST_CHECK((std::is_same<arb,decltype(a2 - 2.)>::value));
+    BOOST_CHECK((std::is_same<arb,decltype(2. - a2)>::value));
     BOOST_CHECK_EQUAL((a2 - 2.).get_midpoint(),1.);
     BOOST_CHECK_EQUAL((a2 - 2.).get_radius(),0.);
     BOOST_CHECK_EQUAL((a2 - 2.).get_precision(),arb::get_default_precision() + 20);
