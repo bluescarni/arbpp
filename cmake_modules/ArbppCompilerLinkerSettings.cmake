@@ -65,6 +65,8 @@ if(CMAKE_COMPILER_IS_INTELXX)
     if(NOT INTEL_VERSION_CHECK)
         MESSAGE(FATAL_ERROR "Unsupported Intel compiler version, please upgrade your compiler.")
     endif()
+    # These diagnostic messages from ICC are often wrong. Use another compiler when debugging.
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -diag-disable 2304,2305,1682,2259,3373")
 endif()
 
 # Common configuration for GCC, Clang and Intel.
