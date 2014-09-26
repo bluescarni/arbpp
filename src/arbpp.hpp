@@ -146,20 +146,6 @@ class arb: private detail::base_arb<>
         {
             static const bool value = is_arb_int<T>::value || is_arb_uint<T>::value || is_arb_float<T>::value;
         };
-        // Type valid for unary arithmetic operations.
-        template <typename T>
-        struct is_unary_arithmetic_type
-        {
-            static const bool value = is_interoperable<T>::value || std::is_same<T,arb>::value;
-        };
-        // Type valid for binary arithmetic operations.
-        template <typename T, typename U>
-        struct are_binary_arithmetic_types
-        {
-            static const bool value = (std::is_same<T,arb>::value && is_interoperable<U>::value) ||
-                (std::is_same<U,arb>::value && is_interoperable<T>::value) ||
-                (std::is_same<T,arb>::value && std::is_same<U,arb>::value);
-        };
         // Custom is_digit checker.
         static bool is_digit(char c)
         {
@@ -250,32 +236,36 @@ class arb: private detail::base_arb<>
             ::arb_set_arf(&m_arb,&tmp_arf.m_arf);
         }
         // Addition.
-        void in_place_add(const arb &other)
+        arb &in_place_add(const arb &other)
         {
             // Work with max precision.
             if (other.m_prec > m_prec) {
                 m_prec = other.m_prec;
             }
             ::arb_add(&m_arb,&m_arb,&other.m_arb,m_prec);
+            return *this;
         }
         template <typename T, typename std::enable_if<is_arb_int<T>::value,int>::type = 0>
-        void in_place_add(const T &n)
+        arb &in_place_add(const T &n)
         {
             ::arb_add_si(&m_arb,&m_arb,static_cast<long>(n),m_prec);
+            return *this;
         }
         template <typename T, typename std::enable_if<is_arb_uint<T>::value,int>::type = 0>
-        void in_place_add(const T &n)
+        arb &in_place_add(const T &n)
         {
             ::arb_add_ui(&m_arb,&m_arb,static_cast<unsigned long>(n),m_prec);
+            return *this;
         }
         template <typename T, typename std::enable_if<is_arb_float<T>::value,int>::type = 0>
-        void in_place_add(const T &x)
+        arb &in_place_add(const T &x)
         {
             arf_raii tmp_arf;
             // Set tmp_arf *exactly* to x.
             ::arf_set_d(&tmp_arf.m_arf,static_cast<double>(x));
             // Add with precision m_prec.
             ::arb_add_arf(&m_arb,&m_arb,&tmp_arf.m_arf,m_prec);
+            return *this;
         }
         static arb binary_add(const arb &a, const arb &b)
         {
@@ -331,32 +321,36 @@ class arb: private detail::base_arb<>
             return binary_add(a,x);
         }
         // Subtraction.
-        void in_place_sub(const arb &other)
+        arb &in_place_sub(const arb &other)
         {
             // Work with max precision.
             if (other.m_prec > m_prec) {
                 m_prec = other.m_prec;
             }
             ::arb_sub(&m_arb,&m_arb,&other.m_arb,m_prec);
+            return *this;
         }
         template <typename T, typename std::enable_if<is_arb_int<T>::value,int>::type = 0>
-        void in_place_sub(const T &n)
+        arb &in_place_sub(const T &n)
         {
             ::arb_sub_si(&m_arb,&m_arb,static_cast<long>(n),m_prec);
+            return *this;
         }
         template <typename T, typename std::enable_if<is_arb_uint<T>::value,int>::type = 0>
-        void in_place_sub(const T &n)
+        arb &in_place_sub(const T &n)
         {
             ::arb_sub_ui(&m_arb,&m_arb,static_cast<unsigned long>(n),m_prec);
+            return *this;
         }
         template <typename T, typename std::enable_if<is_arb_float<T>::value,int>::type = 0>
-        void in_place_sub(const T &x)
+        arb &in_place_sub(const T &x)
         {
             arf_raii tmp_arf;
             // Set tmp_arf *exactly* to x.
             ::arf_set_d(&tmp_arf.m_arf,static_cast<double>(x));
             // Sub with precision m_prec.
             ::arb_sub_arf(&m_arb,&m_arb,&tmp_arf.m_arf,m_prec);
+            return *this;
         }
     public:
         /// Default precision.
@@ -627,11 +621,10 @@ class arb: private detail::base_arb<>
          * 
          * @return reference to \p this.
          */
-        template <typename T, typename std::enable_if<is_unary_arithmetic_type<T>::value,int>::type = 0>
-        arb &operator+=(const T &x)
+        template <typename T>
+        auto operator+=(const T &x) -> decltype(this->in_place_add(x))
         {
-            in_place_add(x);
-            return *this;
+            return in_place_add(x);
         }
         /// Generic binary addition involving arbpp::arb.
         /**
@@ -649,10 +642,10 @@ class arb: private detail::base_arb<>
          * @param[in] a first operand.
          * @param[in] b second operand.
          * 
-         * @return <tt>a+b</tt>.
+         * @return <tt>a + b</tt>.
          */
-        template <typename T, typename U, typename std::enable_if<are_binary_arithmetic_types<T,U>::value,int>::type = 0>
-        friend arb operator+(const T &a, const U &b)
+        template <typename T, typename U>
+        friend auto operator+(const T &a, const U &b) -> decltype(arb::binary_add(a,b))
         {
             return binary_add(a,b);
         }
@@ -689,11 +682,10 @@ class arb: private detail::base_arb<>
          * 
          * @return reference to \p this.
          */
-        template <typename T, typename std::enable_if<is_unary_arithmetic_type<T>::value,int>::type = 0>
-        arb &operator-=(const T &x)
+        template <typename T>
+        auto operator-=(const T &x) -> decltype(this->in_place_sub(x))
         {
-            in_place_sub(x);
-            return *this;
+            return in_place_sub(x);
         }
         /// Cosine.
         /**
