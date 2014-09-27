@@ -408,8 +408,6 @@ BOOST_AUTO_TEST_CASE(arb_negate_test)
     BOOST_CHECK_EQUAL((-(-a0)).get_radius(),0.);
 }
 
-#if defined(ARBPP_HAS_USER_DEFINED_LITERALS)
-
 BOOST_AUTO_TEST_CASE(arb_udl_test)
 {
     BOOST_CHECK_EQUAL((1.23456_arb).get_midpoint(),arb{"1.23456"}.get_midpoint());
@@ -419,8 +417,6 @@ BOOST_AUTO_TEST_CASE(arb_udl_test)
     BOOST_CHECK_EQUAL((1.234e3_arb).get_midpoint(),arb{1234}.get_midpoint());
     BOOST_CHECK_EQUAL((1.234e3_arb).get_radius(),arb{1234}.get_radius());
 }
-
-#endif
 
 BOOST_AUTO_TEST_CASE(arb_base_test)
 {

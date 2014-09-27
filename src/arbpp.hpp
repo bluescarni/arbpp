@@ -836,12 +836,6 @@ inline void swap(arb &a0, arb &a1) noexcept
     a0.swap(a1);
 }
 
-// NOTE: user-defined literals are supported from GCC 4.7 onwards.
-#if defined(__INTEL_COMPILER) || defined(__clang__)  || \
-    (defined(__GNUC__) && (__GNUC__  > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 7)))
-
-#define ARBPP_HAS_USER_DEFINED_LITERALS
-
 inline namespace literals
 {
 
@@ -862,8 +856,6 @@ inline arb operator "" _arb(const char *s)
 }
 
 }
-
-#endif
 
 }
 
