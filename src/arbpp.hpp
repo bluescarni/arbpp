@@ -24,6 +24,7 @@
 #include <algorithm>
 #include <arb.h>
 #include <arf.h>
+#include <cassert>
 #include <cmath>
 #include <fmpr.h>
 #include <iostream>
@@ -67,6 +68,14 @@ struct arf_raii
     arf_raii(arf_raii &&) = delete;
     arf_raii &operator=(const arf_raii &) = delete;
     arf_raii &operator=(arf_raii &&) = delete;
+    operator ::arf_struct *()
+    {
+        return &m_arf;
+    }
+    operator ::arf_struct const *() const
+    {
+        return &m_arf;
+    }
     ~arf_raii()
     {
         ::arf_clear(&m_arf);
@@ -85,11 +94,45 @@ struct fmpr_raii
     fmpr_raii(fmpr_raii &&) = delete;
     fmpr_raii &operator=(const fmpr_raii &) = delete;
     fmpr_raii &operator=(fmpr_raii &&) = delete;
+    operator ::fmpr_struct *()
+    {
+        return &m_fmpr;
+    }
+    operator ::fmpr_struct const *() const
+    {
+        return &m_fmpr;
+    }
     ~fmpr_raii()
     {
         ::fmpr_clear(&m_fmpr);
     }
     ::fmpr_struct m_fmpr;
+};
+
+struct mpfr_raii
+{
+    explicit mpfr_raii(::mpfr_prec_t prec)
+    {
+        // This will set to NaN.
+        ::mpfr_init2(m_mpfr,prec);
+    }
+    mpfr_raii(const mpfr_raii &) = delete;
+    mpfr_raii(mpfr_raii &&) = delete;
+    mpfr_raii &operator=(const mpfr_raii &) = delete;
+    mpfr_raii &operator=(mpfr_raii &&) = delete;
+    operator std::remove_extent< ::mpfr_t>::type *()
+    {
+        return m_mpfr;
+    }
+    operator std::remove_extent< ::mpfr_t>::type const *() const
+    {
+        return m_mpfr;
+    }
+    ~mpfr_raii()
+    {
+        ::mpfr_clear(m_mpfr);
+    }
+    ::mpfr_t m_mpfr;
 };
 
 }
@@ -118,6 +161,7 @@ class arb: private detail::base_arb<>
         // Import locally the RAII names.
         typedef detail::arf_raii arf_raii;
         typedef detail::fmpr_raii fmpr_raii;
+        typedef detail::mpfr_raii mpfr_raii;
         // Signed integers with which arb can interoperate.
         template <typename T>
         struct is_arb_int
@@ -157,7 +201,6 @@ class arb: private detail::base_arb<>
         // Utility function to print an fmpr to stream using mpfr. Will clear f on exit.
         static void print_fmpr(std::ostream &os, ::fmpr_t f)
         {
-            ::mpfr_t t;
             long prec = ::fmpr_bits(f);
             // NOTE: here we need to make sure the precision from arb
             // is compatible with the mpfr bounds. We could raise an error,
@@ -171,14 +214,13 @@ class arb: private detail::base_arb<>
             }
             // NOTE: here we are (reasonably) assuming that MPFR_MIN/MAX
             // fall within the range of ::mpfr_prec_t.
-            ::mpfr_init2(t,static_cast< ::mpfr_prec_t>(prec));
+            mpfr_raii t(static_cast< ::mpfr_prec_t>(prec));
             ::fmpr_get_mpfr(t,f,MPFR_RNDN);
             // Couple of variables used below.
-            const bool is_zero = (mpfr_sgn(t) == 0);
+            const bool is_zero = (mpfr_sgn(t.m_mpfr) == 0);
             ::mpfr_exp_t exp(0);
             char *cptr = ::mpfr_get_str(nullptr,&exp,10,0,t,MPFR_RNDN);
-            // Clear everything before checking, for exception safety.
-            ::mpfr_clear(t);
+            // Clear before checking, for exception safety.
             ::fmpr_clear(f);
             if (!cptr) {
                 throw std::invalid_argument("error while converting arb to string");
@@ -232,8 +274,8 @@ class arb: private detail::base_arb<>
         void construct(const T &x)
         {
             arf_raii tmp_arf;
-            ::arf_set_d(&tmp_arf.m_arf,static_cast<double>(x));
-            ::arb_set_arf(&m_arb,&tmp_arf.m_arf);
+            ::arf_set_d(tmp_arf,static_cast<double>(x));
+            ::arb_set_arf(&m_arb,tmp_arf);
         }
         // Addition.
         arb &in_place_add(const arb &other)
@@ -262,9 +304,9 @@ class arb: private detail::base_arb<>
         {
             arf_raii tmp_arf;
             // Set tmp_arf *exactly* to x.
-            ::arf_set_d(&tmp_arf.m_arf,static_cast<double>(x));
+            ::arf_set_d(tmp_arf,static_cast<double>(x));
             // Add with precision m_prec.
-            ::arb_add_arf(&m_arb,&m_arb,&tmp_arf.m_arf,m_prec);
+            ::arb_add_arf(&m_arb,&m_arb,tmp_arf,m_prec);
             return *this;
         }
         static arb binary_add(const arb &a, const arb &b)
@@ -310,8 +352,8 @@ class arb: private detail::base_arb<>
         {
             arb retval;
             arf_raii tmp_arf;
-            ::arf_set_d(&tmp_arf.m_arf,static_cast<double>(x));
-            ::arb_add_arf(&retval.m_arb,&a.m_arb,&tmp_arf.m_arf,a.m_prec);
+            ::arf_set_d(tmp_arf,static_cast<double>(x));
+            ::arb_add_arf(&retval.m_arb,&a.m_arb,tmp_arf,a.m_prec);
             retval.m_prec = a.m_prec;
             return retval;
         }
@@ -347,9 +389,9 @@ class arb: private detail::base_arb<>
         {
             arf_raii tmp_arf;
             // Set tmp_arf *exactly* to x.
-            ::arf_set_d(&tmp_arf.m_arf,static_cast<double>(x));
+            ::arf_set_d(tmp_arf,static_cast<double>(x));
             // Sub with precision m_prec.
-            ::arb_sub_arf(&m_arb,&m_arb,&tmp_arf.m_arf,m_prec);
+            ::arb_sub_arf(&m_arb,&m_arb,tmp_arf,m_prec);
             return *this;
         }
         static arb binary_sub(const arb &a, const arb &b)
@@ -399,8 +441,8 @@ class arb: private detail::base_arb<>
         {
             arb retval;
             arf_raii tmp_arf;
-            ::arf_set_d(&tmp_arf.m_arf,static_cast<double>(x));
-            ::arb_sub_arf(&retval.m_arb,&a.m_arb,&tmp_arf.m_arf,a.m_prec);
+            ::arf_set_d(tmp_arf,static_cast<double>(x));
+            ::arb_sub_arf(&retval.m_arb,&a.m_arb,tmp_arf,a.m_prec);
             retval.m_prec = a.m_prec;
             return retval;
         }
@@ -491,9 +533,15 @@ class arb: private detail::base_arb<>
         /// Constructor from string.
         /**
          * This constructor will set the midpoint to a value represented
-         * by the string \p str and rounded to a precision of \p prec. The expected string format
-         * is the same described in the MPFR documentation, and base 10 representation is assumed.
-         * The radius will be set to zero.
+         * by the string \p str and rounded to a precision of \p prec bits.
+         * The expected string format is the same described in the MPFR documentation,
+         * and base 10 representation is assumed.
+         * 
+         * If the value of the input string can be represented exactly with \p prec
+         * bits of precision, then the midpoint will be set to that value
+         * and the radius will be set to zero. Otherwise, the midpoint will be set
+         * to the nearest representable value and the radius is guaranteed to include
+         * the original value.
          * 
          * @param[in] str string used for construction.
          * @param[in] prec desired precision.
@@ -502,19 +550,59 @@ class arb: private detail::base_arb<>
          */
         arb(const std::string &str, long prec = arb::get_default_precision())
         {
+            // Clear the MPFR underflow flag.
+            ::mpfr_clear_underflow();
             // Set precision and construct empty instance.
             set_precision(prec);
             ::arb_init(&m_arb);
             // Try to parse an mpfr from the input string.
-            ::mpfr_t t;
-            ::mpfr_init2(t,prec);
-            const int retval = ::mpfr_set_str(t,str.c_str(),10,MPFR_RNDN);
-            if (retval != 0) {
-                ::mpfr_clear(t);
+            mpfr_raii m(prec);
+            char *endptr;
+            const int retval = ::mpfr_strtofr(m,str.c_str(),&endptr,10,MPFR_RNDN);
+            // NOTE: the first case corresponds to invalid string input, the second
+            // to valid input only for a subset of the string.
+            if (endptr == str.c_str() || endptr != str.c_str() + str.size()) {
                 throw std::invalid_argument("invalid string input");
             }
-            ::arf_set_mpfr(arb_midref(&m_arb),t);
-            ::mpfr_clear(t);
+            if (::mpfr_underflow_p()) {
+                ::mpfr_clear_underflow();
+                throw std::underflow_error("underflow in conversion from string");
+            }
+            // Start by setting the value.
+            ::arf_set_mpfr(arb_midref(&m_arb),m);
+            if (retval != 0) {
+                // Assert that the mpfr value represents a finite number.
+                // Infs and nans should return retval == 0.
+                assert(::mpfr_number_p(m));
+                mpfr_raii tmp0(prec), tmp1(prec);
+                ::mpfr_set(tmp0.m_mpfr,m.m_mpfr,MPFR_RNDN);
+                ::mpfr_set(tmp1.m_mpfr,m.m_mpfr,MPFR_RNDN);
+                if (retval < 0) {
+                    // Converted value is lower than the exact value.
+                    ::mpfr_nextabove(tmp0);
+                    if (mpfr_inf_p(tmp0.m_mpfr)) {
+                        throw std::overflow_error(
+                            "an infinity has been generated in the computation of the radius");
+                    }
+                    ::mpfr_sub(tmp1,tmp0,m,MPFR_RNDN);
+                } else {
+                    // Converted value is higher than the exact value.
+                    ::mpfr_nextbelow(tmp0);
+                    if (mpfr_inf_p(tmp0.m_mpfr)) {
+                        throw std::overflow_error(
+                            "an infinity has been generated in the computation of the radius");
+                    }
+                    ::mpfr_sub(tmp1,m,tmp0,MPFR_RNDN);
+                }
+                // Check if any underflow happened.
+                if (::mpfr_underflow_p()) {
+                    ::mpfr_clear_underflow();
+                    throw std::underflow_error("underflow in the calculation of the radius");
+                }
+                fmpr_raii f;
+                ::fmpr_set_mpfr(f,tmp1);
+                ::mag_set_fmpr(arb_radref(&m_arb),f);
+            }
         }
         /// Destructor.
         ~arb()
@@ -580,8 +668,8 @@ class arb: private detail::base_arb<>
                 throw std::invalid_argument("an error value must be positive and not NaN");
             }
             arf_raii tmp_arf;
-            ::arf_set_d(&tmp_arf.m_arf,err);
-            ::arb_add_error_arf(&m_arb,&tmp_arf.m_arf);
+            ::arf_set_d(tmp_arf,err);
+            ::arb_add_error_arf(&m_arb,tmp_arf);
         }
         /// Precision setter.
         /**
@@ -682,8 +770,8 @@ class arb: private detail::base_arb<>
         double get_radius() const
         {
             fmpr_raii tmp;
-            ::mag_get_fmpr(&tmp.m_fmpr,arb_radref(&m_arb));
-            return ::fmpr_get_d(&tmp.m_fmpr,FMPR_RND_UP);
+            ::mag_get_fmpr(tmp,arb_radref(&m_arb));
+            return ::fmpr_get_d(tmp,FMPR_RND_UP);
         }
         /// Identity operator.
         /**

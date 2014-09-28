@@ -94,29 +94,6 @@ BOOST_AUTO_TEST_CASE(arb_ctor_assignment_test)
     BOOST_CHECK_EQUAL((arb{-42,arb::get_default_precision() - 1}.get_midpoint()),-42.);
     BOOST_CHECK_EQUAL((arb{-42,arb::get_default_precision() - 1}.get_radius()),0);
     BOOST_CHECK_EQUAL((arb{-42,arb::get_default_precision() - 1}.get_precision()),arb::get_default_precision() - 1);
-    // Constructor from string.
-    BOOST_CHECK_EQUAL((arb{"-42"}.get_midpoint()),-42.);
-    BOOST_CHECK_EQUAL((arb{"42"}.get_midpoint()),42.);
-    BOOST_CHECK_EQUAL((arb{"+42"}.get_midpoint()),42.);
-    BOOST_CHECK_EQUAL((arb{" -42"}.get_midpoint()),-42.);
-    BOOST_CHECK_EQUAL(arb{"-42"}.get_radius(),0.);
-    BOOST_CHECK_EQUAL(arb{"-42"}.get_precision(),arb::get_default_precision());
-    BOOST_CHECK_EQUAL((arb{"-42",arb::get_default_precision() + 1}.get_midpoint()),-42.);
-    BOOST_CHECK_EQUAL((arb{"-42",arb::get_default_precision() + 1}).get_radius(),0.);
-    BOOST_CHECK_EQUAL((arb{"-42",arb::get_default_precision() + 1}).get_precision(),arb::get_default_precision() + 1);
-    BOOST_CHECK_EQUAL((arb{"-1.234e3"}.get_midpoint()),-1234.);
-    BOOST_CHECK_EQUAL((arb{"-1.234e3"}.get_radius()),0.);
-    BOOST_CHECK_EQUAL(arb{"-42"}.get_radius(),0.);
-    if (std::numeric_limits<double>::has_infinity && std::numeric_limits<double>::has_quiet_NaN) {
-        BOOST_CHECK_EQUAL(arb{"inf"}.get_midpoint(),std::numeric_limits<double>::infinity());
-        BOOST_CHECK_EQUAL(arb{"-inf"}.get_midpoint(),-std::numeric_limits<double>::infinity());
-        BOOST_CHECK(std::isnan(arb{"nan"}.get_midpoint()));
-        BOOST_CHECK(std::isnan(arb{"-nan"}.get_midpoint()));
-    }
-    // Check errors.
-    BOOST_CHECK_THROW(arb{"ssasda"},std::invalid_argument);
-    BOOST_CHECK_THROW((arb{"ssasda",arb::get_default_precision() + 1}),std::invalid_argument);
-    BOOST_CHECK_THROW(arb{"42 "},std::invalid_argument);
     // Copy assignment.
     arb a5;
     a5 = a4;
@@ -151,6 +128,48 @@ BOOST_AUTO_TEST_CASE(arb_ctor_assignment_test)
     BOOST_CHECK(::arf_is_one(arb_midref(a1.get_arb_t())));
     BOOST_CHECK(::mag_is_zero(arb_radref(a1.get_arb_t())));
     BOOST_CHECK_EQUAL(a1.get_precision(),53);
+}
+
+BOOST_AUTO_TEST_CASE(arb_string_ctor_test)
+{
+    // Constructor from string.
+    BOOST_CHECK_EQUAL((arb{"-42"}.get_midpoint()),-42.);
+    BOOST_CHECK_EQUAL((arb{"42"}.get_midpoint()),42.);
+    BOOST_CHECK_EQUAL((arb{"+42"}.get_midpoint()),42.);
+    BOOST_CHECK_EQUAL((arb{" -42"}.get_midpoint()),-42.);
+    BOOST_CHECK_EQUAL(arb{"-42"}.get_radius(),0.);
+    BOOST_CHECK_EQUAL(arb{"-42"}.get_precision(),arb::get_default_precision());
+    BOOST_CHECK_EQUAL((arb{"-42",arb::get_default_precision() + 1}.get_midpoint()),-42.);
+    BOOST_CHECK_EQUAL((arb{"-42",arb::get_default_precision() + 1}).get_radius(),0.);
+    BOOST_CHECK_EQUAL((arb{"-42",arb::get_default_precision() + 1}).get_precision(),arb::get_default_precision() + 1);
+    BOOST_CHECK_EQUAL((arb{"-1.234e3"}.get_midpoint()),-1234.);
+    BOOST_CHECK_EQUAL((arb{"-1.234e3"}.get_radius()),0.);
+    BOOST_CHECK_EQUAL(arb{"-42"}.get_radius(),0.);
+    // .1 cannot be represented exactly in base 2.
+    BOOST_CHECK(arb{".1"}.get_radius() != 0.);
+    // 1/(2**8).
+    BOOST_CHECK((arb{"0.00390625"}.get_radius() == 0.));
+std::cout << "foo: " << arb{"0.00390625"} << '\n';
+arb_printd(arb{"0.00390625"}.get_arb_t(),1);
+std::cout << '\n';
+    // 1./(2**8)+1./(2**7)+1./(2**6)+1./(2**5)
+    // This one can be represented exactly as well.
+    BOOST_CHECK((arb{"0.05859375"}.get_radius() == 0.));
+    // But if we use only 3 bits of precision, then it will be approximate.
+    BOOST_CHECK((arb{"0.05859375",3}.get_radius() != 0.));
+    // 4 is good.
+    BOOST_CHECK((arb{"0.05859375",4}.get_radius() == 0.));
+    // Check nonfinite inputs.
+    if (std::numeric_limits<double>::has_infinity && std::numeric_limits<double>::has_quiet_NaN) {
+        BOOST_CHECK_EQUAL(arb{"inf"}.get_midpoint(),std::numeric_limits<double>::infinity());
+        BOOST_CHECK_EQUAL(arb{"-inf"}.get_midpoint(),-std::numeric_limits<double>::infinity());
+        BOOST_CHECK(std::isnan(arb{"nan"}.get_midpoint()));
+        BOOST_CHECK(std::isnan(arb{"-nan"}.get_midpoint()));
+    }
+    // Check errors.
+    BOOST_CHECK_THROW(arb{"ssasda"},std::invalid_argument);
+    BOOST_CHECK_THROW((arb{"ssasda",arb::get_default_precision() + 1}),std::invalid_argument);
+    BOOST_CHECK_THROW(arb{"42 "},std::invalid_argument);
 }
 
 BOOST_AUTO_TEST_CASE(arb_add_error_test)
@@ -441,6 +460,8 @@ BOOST_AUTO_TEST_CASE(arb_base_test)
     a0.get_midpoint();
     std::cout << arb{".1"} << '\n';
     std::cout << arb{"1.23456",145} << '\n';
+    //std::cout << ::mpfr_get_emin() << '\n';
+    //std::cout << arb{"1e-4611686018427387810",10} << '\n';
 }
 
 // Keep this for last, in order to have proper
