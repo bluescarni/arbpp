@@ -542,9 +542,6 @@ class arb: private detail::base_arb<>
         {
             // Clear the MPFR underflow flag.
             ::mpfr_clear_underflow();
-            // Set precision and construct empty instance.
-            set_precision(prec);
-            ::arb_init(&m_arb);
             // Try to parse an mpfr from the input string.
             mpfr_raii m(prec);
             char *endptr;
@@ -558,9 +555,9 @@ class arb: private detail::base_arb<>
                 ::mpfr_clear_underflow();
                 throw std::underflow_error("underflow in conversion from string");
             }
-            // Start by setting the value.
-            ::arf_set_mpfr(arb_midref(&m_arb),m);
-            if (retval != 0) {
+            // Set precision.
+            set_precision(prec);
+            if (retval) {
                 // Assert that the mpfr value represents a finite number.
                 // Infs and nans should return retval == 0.
                 assert(::mpfr_number_p(m));
@@ -589,9 +586,19 @@ class arb: private detail::base_arb<>
                     ::mpfr_clear_underflow();
                     throw std::underflow_error("underflow in the calculation of the radius");
                 }
+                // Construct an empty instance and set the midpoint.
+                ::arb_init(&m_arb);
+                ::arf_set_mpfr(arb_midref(&m_arb),m);
+                // Set the radius via a temporary fmpr.
                 fmpr_raii f;
                 ::fmpr_set_mpfr(f,tmp1);
                 ::mag_set_fmpr(arb_radref(&m_arb),f);
+            } else {
+                // Just construct empty instance and set the midpoint.
+                // NOTE: we need to repeat these two lines here for exception safety (instead
+                // of sharing them outside the if block).
+                ::arb_init(&m_arb);
+                ::arf_set_mpfr(arb_midref(&m_arb),m);
             }
         }
         /// Destructor.

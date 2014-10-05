@@ -15,7 +15,7 @@
  *   GNU General Public License for more details.                          *
  *                                                                         *
  *   You should have received a copy of the GNU General Public License     *
- *   along with Foobar.  If not, see <http://www.gnu.org/licenses/>.       *
+ *   along with Arbpp.  If not, see <http://www.gnu.org/licenses/>.        *
  ***************************************************************************/
 
 #include "../src/arbpp.hpp"
@@ -149,9 +149,6 @@ BOOST_AUTO_TEST_CASE(arb_string_ctor_test)
     BOOST_CHECK(arb{".1"}.get_radius() != 0.);
     // 1/(2**8).
     BOOST_CHECK((arb{"0.00390625"}.get_radius() == 0.));
-std::cout << "foo: " << arb{"0.00390625"} << '\n';
-arb_printd(arb{"0.00390625"}.get_arb_t(),1);
-std::cout << '\n';
     // 1./(2**8)+1./(2**7)+1./(2**6)+1./(2**5)
     // This one can be represented exactly as well.
     BOOST_CHECK((arb{"0.05859375"}.get_radius() == 0.));
