@@ -15,7 +15,7 @@
  *   GNU General Public License for more details.                          *
  *                                                                         *
  *   You should have received a copy of the GNU General Public License     *
- *   along with Foobar.  If not, see <http://www.gnu.org/licenses/>.       *
+ *   along with Arbpp.  If not, see <http://www.gnu.org/licenses/>.        *
  ***************************************************************************/
 
 #ifndef ARBPP_ARBPP_HPP
@@ -156,10 +156,6 @@ struct mpfr_raii
  * Move construction and move assignment will leave the moved-from object in an
  * unspecified but valid state.
  */
-// TODO:
-// - consider not using the precision member when printing. Instead, determine how many bits
-//   are necessary to represent exactly the floating-point type and use those instead when converting
-//   to mpfr for printing.
 class arb: private detail::base_arb<>
 {
         // Import locally the RAII names.
@@ -444,6 +440,9 @@ class arb: private detail::base_arb<>
             retval.negate();
             return retval;
         }
+        // Enabler for the generic ctor.
+        template <typename T>
+        using generic_enabler = typename std::enable_if<is_interoperable<T>::value,int>::type;
     public:
         /// Default precision.
         /**
@@ -491,7 +490,7 @@ class arb: private detail::base_arb<>
          * 
          * @param[in] x construction argument.
          */
-        template <typename T, typename std::enable_if<is_interoperable<T>::value,int>::type = 0>
+        template <typename T, generic_enabler<T> = 0>
         explicit arb(const T &x) : m_prec(get_default_precision())
         {
             ::arb_init(&m_arb);
@@ -510,7 +509,7 @@ class arb: private detail::base_arb<>
          * 
          * @throws unspecified any exception thrown by arb::set_precision().
          */
-        template <typename T, typename std::enable_if<is_interoperable<T>::value,int>::type = 0>
+        template <typename T, generic_enabler<T> = 0>
         explicit arb(const T &x, long prec)
         {
             // Set the precision value, with error checking.
@@ -638,7 +637,7 @@ class arb: private detail::base_arb<>
          * 
          * @return reference to \p this.
          */
-        template <typename T, typename std::enable_if<is_interoperable<T>::value,int>::type = 0>
+        template <typename T, generic_enabler<T> = 0>
         arb &operator=(const T &x)
         {
             m_prec = get_default_precision();
