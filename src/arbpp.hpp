@@ -557,28 +557,28 @@ class arb: private detail::base_arb<>
             }
             // Set precision.
             set_precision(prec);
-            if (retval) {
-                // Assert that the mpfr value represents a finite number.
-                // Infs and nans should return retval == 0.
-                assert(::mpfr_number_p(m));
+            // NOTE: here we could have non-finite number in the following cases:
+            // - the passed string was already representing a non-finite ("inf", "nan", etc.),
+            // - the passed string represents a number which gets rounded to +-inf.
+            // In both cases it does not make sense to do the radius calculation, just leave
+            // the non-finite midpoint and a zero radius.
+            if (retval && ::mpfr_number_p(m)) {
                 mpfr_raii tmp0(prec), tmp1(prec);
                 ::mpfr_set(tmp0.m_mpfr,m.m_mpfr,MPFR_RNDN);
                 ::mpfr_set(tmp1.m_mpfr,m.m_mpfr,MPFR_RNDN);
                 if (retval < 0) {
                     // Converted value is lower than the exact value.
                     ::mpfr_nextabove(tmp0);
-                    if (mpfr_inf_p(tmp0.m_mpfr)) {
-                        throw std::overflow_error(
-                            "an infinity has been generated in the computation of the radius");
-                    }
+                    // NOTE: it seems like the behaviour of mpfr when
+                    // the exact value is above the max or below the min is always to round to +-inf,
+                    // so we should never enter here in a situation in which going above/below would lead
+                    // to a nonfinite value.
+                    assert(::mpfr_number_p(tmp0));
                     ::mpfr_sub(tmp1,tmp0,m,MPFR_RNDN);
                 } else {
                     // Converted value is higher than the exact value.
                     ::mpfr_nextbelow(tmp0);
-                    if (mpfr_inf_p(tmp0.m_mpfr)) {
-                        throw std::overflow_error(
-                            "an infinity has been generated in the computation of the radius");
-                    }
+                    assert(::mpfr_number_p(tmp0));
                     ::mpfr_sub(tmp1,m,tmp0,MPFR_RNDN);
                 }
                 // Check if any underflow happened.

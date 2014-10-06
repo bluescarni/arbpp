@@ -23,17 +23,17 @@
 #define BOOST_TEST_MODULE arb_test
 #include <boost/test/unit_test.hpp>
 
+#include <arb.h>
+#include <arf.h>
 #include <cmath>
+#include <flint/flint.h>
 #include <limits>
+#include <mag.h>
+#include <mpfr.h>
 #include <sstream>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
-
-#include "arb.h"
-#include "arf.h"
-#include "mag.h"
-#include "flint/flint.h"
 
 using namespace arbpp;
 
@@ -130,6 +130,23 @@ BOOST_AUTO_TEST_CASE(arb_ctor_assignment_test)
     BOOST_CHECK_EQUAL(a1.get_precision(),53);
 }
 
+struct raii_expo_set
+{
+    explicit raii_expo_set(::mpfr_exp_t emin, ::mpfr_exp_t emax):
+        old_emin(::mpfr_get_emin()),old_emax(::mpfr_get_emax())
+    {
+        ::mpfr_set_emin(emin);
+        ::mpfr_set_emax(emax);
+    }
+    ~raii_expo_set()
+    {
+        ::mpfr_set_emin(old_emin);
+        ::mpfr_set_emax(old_emax);
+    }
+    const ::mpfr_exp_t old_emin;
+    const ::mpfr_exp_t old_emax;
+};
+
 BOOST_AUTO_TEST_CASE(arb_string_ctor_test)
 {
     // Constructor from string.
@@ -167,15 +184,29 @@ BOOST_AUTO_TEST_CASE(arb_string_ctor_test)
     BOOST_CHECK_THROW(arb{"ssasda"},std::invalid_argument);
     BOOST_CHECK_THROW((arb{"ssasda",arb::get_default_precision() + 1}),std::invalid_argument);
     BOOST_CHECK_THROW(arb{"42 "},std::invalid_argument);
-    ::mpfr_set_emin(-1023);
-    ::mpfr_set_emax(1023);
-    detail::mpfr_raii m(53);
-    std::cout << "status is " << ::mpfr_set_si_2exp(m,1,-1024,MPFR_RNDN) << '\n';
-    std::cout << "is zero: " << ::mpfr_cmp_ui(m,0u) << '\n';
-    ::mpfr_nextbelow(m);
-    std::cout << "is zero: " << ::mpfr_cmp_ui(m,0u) << '\n';
+    // Tests with limited exponent range to check error handling. Here we are assuming the default precision
+    // is 53 bit (double precision).
+    raii_expo_set es(-1022,1023);
+    // This should generate an underflow error when setting the midpoint,
+    // as 2**-1022 ~ 2.23E-308.
     BOOST_CHECK_THROW(arb{"1E-309"},std::underflow_error);
-    std::cout << arb{"5.56269E-309"} << '\n';
+    // This is a bit higher than halfway between 0 and 2**-1022. The midpoint setting
+    // will be ok (it will set to 2**-1022 rounding upwards), but the radius calculation
+    // will result in an underflow error.
+    BOOST_CHECK_THROW(arb{"1.12E-308"},std::underflow_error);
+    // This gets rounded up to inf directly in the midpoint, zero radius.
+    BOOST_CHECK_EQUAL(arb{"1.9999999999999997779553950749686919152736663818359375E308"}.get_radius(),0.);
+    BOOST_CHECK_EQUAL(arb{"-1.9999999999999997779553950749686919152736663818359375E308"}.get_radius(),0.);
+    if (std::numeric_limits<double>::has_infinity) {
+        BOOST_CHECK_EQUAL(arb{"1.9999999999999997779553950749686919152736663818359375E308"}.get_midpoint(),std::numeric_limits<double>::infinity());
+        BOOST_CHECK_EQUAL(arb{"-1.9999999999999997779553950749686919152736663818359375E308"}.get_midpoint(),-std::numeric_limits<double>::infinity());
+    }
+    // NOTE: here I cannot understand what is going on with MPFR. It looks like in double precision the
+    // highest representable number should be (2-2**-52)*2**1023 ~ 1.797693...E308, but it looks like actually
+    // it is half of that. Anything above half results in infinity being produced. It's not "incorrect" but probably
+    // not very useful. For now, just check that half of that value is fine.
+    BOOST_CHECK(std::isfinite(arb{"8.988465674311578540726371186585217839903528376292249829945873840157863039001426938E307"}.get_midpoint()));
+    BOOST_CHECK(std::isfinite(arb{"-8.988465674311578540726371186585217839903528376292249829945873840157863039001426938E307"}.get_midpoint()));
 }
 
 BOOST_AUTO_TEST_CASE(arb_add_error_test)
