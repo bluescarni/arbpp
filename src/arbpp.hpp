@@ -921,6 +921,7 @@ inline void swap(arb &a0, arb &a1) noexcept
     a0.swap(a1);
 }
 
+/// Literal namespace.
 inline namespace literals
 {
 

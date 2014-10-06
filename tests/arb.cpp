@@ -167,6 +167,15 @@ BOOST_AUTO_TEST_CASE(arb_string_ctor_test)
     BOOST_CHECK_THROW(arb{"ssasda"},std::invalid_argument);
     BOOST_CHECK_THROW((arb{"ssasda",arb::get_default_precision() + 1}),std::invalid_argument);
     BOOST_CHECK_THROW(arb{"42 "},std::invalid_argument);
+    ::mpfr_set_emin(-1023);
+    ::mpfr_set_emax(1023);
+    detail::mpfr_raii m(53);
+    std::cout << "status is " << ::mpfr_set_si_2exp(m,1,-1024,MPFR_RNDN) << '\n';
+    std::cout << "is zero: " << ::mpfr_cmp_ui(m,0u) << '\n';
+    ::mpfr_nextbelow(m);
+    std::cout << "is zero: " << ::mpfr_cmp_ui(m,0u) << '\n';
+    BOOST_CHECK_THROW(arb{"1E-309"},std::underflow_error);
+    std::cout << arb{"5.56269E-309"} << '\n';
 }
 
 BOOST_AUTO_TEST_CASE(arb_add_error_test)
