@@ -195,16 +195,16 @@ BOOST_AUTO_TEST_CASE(arb_string_ctor_test)
     // will result in an underflow error.
     BOOST_CHECK_THROW(arb{"1.12E-308"},std::underflow_error);
     // This gets rounded up to inf directly in the midpoint, zero radius.
-    BOOST_CHECK_EQUAL(arb{"1.9999999999999997779553950749686919152736663818359375E308"}.get_radius(),0.);
-    BOOST_CHECK_EQUAL(arb{"-1.9999999999999997779553950749686919152736663818359375E308"}.get_radius(),0.);
+    BOOST_CHECK_EQUAL(arb{"1.9E308"}.get_radius(),0.);
+    BOOST_CHECK_EQUAL(arb{"-1.9E308"}.get_radius(),0.);
     if (std::numeric_limits<double>::has_infinity) {
-        BOOST_CHECK_EQUAL(arb{"1.9999999999999997779553950749686919152736663818359375E308"}.get_midpoint(),std::numeric_limits<double>::infinity());
-        BOOST_CHECK_EQUAL(arb{"-1.9999999999999997779553950749686919152736663818359375E308"}.get_midpoint(),-std::numeric_limits<double>::infinity());
+        BOOST_CHECK_EQUAL(arb{"1.9E308"}.get_midpoint(),std::numeric_limits<double>::infinity());
+        BOOST_CHECK_EQUAL(arb{"-1.9E308"}.get_midpoint(),-std::numeric_limits<double>::infinity());
     }
     // NOTE: here I cannot understand what is going on with MPFR. It looks like in double precision the
     // highest representable number should be (2-2**-52)*2**1023 ~ 1.797693...E308, but it looks like actually
     // it is half of that. Anything above half results in infinity being produced. It's not "incorrect" but probably
-    // not very useful. For now, just check that half of that value is fine.
+    // not very useful. For now, just check that slightly less than half of that value is fine.
     BOOST_CHECK(std::isfinite(arb{"8.988465674311578540726371186585217839903528376292249829945873840157863039001426938E307"}.get_midpoint()));
     BOOST_CHECK(std::isfinite(arb{"-8.988465674311578540726371186585217839903528376292249829945873840157863039001426938E307"}.get_midpoint()));
 }

@@ -533,9 +533,14 @@ class arb: private detail::base_arb<>
          * to the nearest representable value and the radius is guaranteed to include
          * the original value.
          * 
+         * Please note that the entire string must represent a valid floating-point
+         * value.
+         * 
          * @param[in] str string used for construction.
          * @param[in] prec desired precision.
          * 
+         * @throws std::invalid_argument in case of an invalid input string.
+         * @throws std::underflow_error in case of underflow.
          * @throws unspecified any exception thrown by arb::set_precision().
          */
         arb(const std::string &str, long prec = arb::get_default_precision())
