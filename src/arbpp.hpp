@@ -440,6 +440,88 @@ class arb: private detail::base_arb<>
             retval.negate();
             return retval;
         }
+        // Multiplication.
+        arb &in_place_mul(const arb &other)
+        {
+            if (other.m_prec > m_prec) {
+                m_prec = other.m_prec;
+            }
+            ::arb_mul(&m_arb,&m_arb,&other.m_arb,m_prec);
+            return *this;
+        }
+        template <typename T, typename std::enable_if<is_arb_int<T>::value,int>::type = 0>
+        arb &in_place_mul(const T &n)
+        {
+            ::arb_mul_si(&m_arb,&m_arb,static_cast<long>(n),m_prec);
+            return *this;
+        }
+        template <typename T, typename std::enable_if<is_arb_uint<T>::value,int>::type = 0>
+        arb &in_place_mul(const T &n)
+        {
+            ::arb_mul_ui(&m_arb,&m_arb,static_cast<unsigned long>(n),m_prec);
+            return *this;
+        }
+        template <typename T, typename std::enable_if<is_arb_float<T>::value,int>::type = 0>
+        arb &in_place_mul(const T &x)
+        {
+            arf_raii tmp_arf;
+            ::arf_set_d(tmp_arf,static_cast<double>(x));
+            ::arb_mul_arf(&m_arb,&m_arb,tmp_arf,m_prec);
+            return *this;
+        }
+        static arb binary_mul(const arb &a, const arb &b)
+        {
+            arb retval;
+            // Set max precision.
+            if (a.m_prec > b.m_prec) {
+                retval.m_prec = a.m_prec;
+            } else {
+                retval.m_prec = b.m_prec;
+            }
+            ::arb_mul(&retval.m_arb,&a.m_arb,&b.m_arb,retval.m_prec);
+            return retval;
+        }
+        template <typename T, typename std::enable_if<is_arb_int<T>::value,int>::type = 0>
+        static arb binary_mul(const arb &a, const T &n)
+        {
+            arb retval;
+            ::arb_mul_si(&retval.m_arb,&a.m_arb,static_cast<long>(n),a.m_prec);
+            retval.m_prec = a.m_prec;
+            return retval;
+        }
+        template <typename T, typename std::enable_if<is_arb_int<T>::value,int>::type = 0>
+        static arb binary_mul(const T &n, const arb &a)
+        {
+            return binary_mul(a,n);
+        }
+        template <typename T, typename std::enable_if<is_arb_uint<T>::value,int>::type = 0>
+        static arb binary_mul(const arb &a, const T &n)
+        {
+            arb retval;
+            ::arb_mul_ui(&retval.m_arb,&a.m_arb,static_cast<unsigned long>(n),a.m_prec);
+            retval.m_prec = a.m_prec;
+            return retval;
+        }
+        template <typename T, typename std::enable_if<is_arb_uint<T>::value,int>::type = 0>
+        static arb binary_mul(const T &n, const arb &a)
+        {
+            return binary_mul(a,n);
+        }
+        template <typename T, typename std::enable_if<is_arb_float<T>::value,int>::type = 0>
+        static arb binary_mul(const arb &a, const T &x)
+        {
+            arb retval;
+            arf_raii tmp_arf;
+            ::arf_set_d(tmp_arf,static_cast<double>(x));
+            ::arb_mul_arf(&retval.m_arb,&a.m_arb,tmp_arf,a.m_prec);
+            retval.m_prec = a.m_prec;
+            return retval;
+        }
+        template <typename T, typename std::enable_if<is_arb_float<T>::value,int>::type = 0>
+        static arb binary_mul(const T &x, const arb &a)
+        {
+            return binary_mul(a,x);
+        }
         // Enabler for the generic ctor.
         template <typename T>
         using generic_enabler = typename std::enable_if<is_interoperable<T>::value,int>::type;
@@ -886,6 +968,49 @@ class arb: private detail::base_arb<>
         friend auto operator-(const T &a, const U &b) -> decltype(arb::binary_sub(a,b))
         {
             return binary_sub(a,b);
+        }
+        /// In-place multiplication.
+        /**
+         * \note
+         * This operator is enabled only if \p T is an \ref interop "interoperable type"
+         * or arbpp::arb.
+         * 
+         * This method will set \p this to <tt>this * x</tt>. In case \p T is arbpp::arb, then
+         * the operation is carried out with a precision corresponding to the maximum between
+         * the precisions of \p this and \p x. Otherwise, the operation is carried out with the
+         * precision of \p this.
+         * 
+         * @param[in] x multiplication argument.
+         * 
+         * @return reference to \p this.
+         */
+        template <typename T>
+        auto operator*=(const T &x) -> decltype(this->in_place_mul(x))
+        {
+            return in_place_mul(x);
+        }
+        /// Generic binary multiplication involving arbpp::arb.
+        /**
+         * \note
+         * This template operator is enabled only if either:
+         * - \p T is arbpp::arb and \p U is an \ref interop "interoperable type",
+         * - \p U is arbpp::arb and \p T is an \ref interop "interoperable type",
+         * - both \p T and \p U are arbpp::arb.
+         * 
+         * This method will compute <tt>a * b</tt> and return it as an arbpp::arb. In case \p T and \p U are both
+         * arbpp::arb, then the operation is carried out with a precision corresponding to the maximum between
+         * the precisions of \p a and \p b. Otherwise, the result will have the precision of the
+         * arbpp::arb argument.
+         * 
+         * @param[in] a first operand.
+         * @param[in] b second operand.
+         * 
+         * @return <tt>a * b</tt>.
+         */
+        template <typename T, typename U>
+        friend auto operator*(const T &a, const U &b) -> decltype(arb::binary_mul(a,b))
+        {
+            return binary_mul(a,b);
         }
         /// Cosine.
         /**
