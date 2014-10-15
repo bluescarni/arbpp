@@ -715,8 +715,6 @@ class arb: private detail::base_arb<>
          */
         arb(const std::string &str, long prec = arb::get_default_precision())
         {
-            // Clear the MPFR underflow flag.
-            ::mpfr_clear_underflow();
             // Try to parse an mpfr from the input string.
             mpfr_raii m(prec);
             char *endptr;
@@ -726,10 +724,6 @@ class arb: private detail::base_arb<>
             if (endptr == str.c_str() || endptr != str.c_str() + str.size()) {
                 throw std::invalid_argument("invalid string input");
             }
-            if (::mpfr_underflow_p()) {
-                ::mpfr_clear_underflow();
-                throw std::underflow_error("underflow in conversion from string");
-            }
             // Set precision.
             set_precision(prec);
             // NOTE: here we could have non-finite number in the following cases:
@@ -738,6 +732,8 @@ class arb: private detail::base_arb<>
             // In both cases it does not make sense to do the radius calculation, just leave
             // the non-finite midpoint and a zero radius.
             if (retval && ::mpfr_number_p(m)) {
+                // Clear the underflow flag.
+                ::mpfr_clear_underflow();
                 mpfr_raii tmp0(prec), tmp1(prec);
                 ::mpfr_set(tmp0.m_mpfr,m.m_mpfr,MPFR_RNDN);
                 ::mpfr_set(tmp1.m_mpfr,m.m_mpfr,MPFR_RNDN);
