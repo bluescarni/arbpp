@@ -713,7 +713,7 @@ class arb: private detail::base_arb<>
          * @throws std::underflow_error in case of underflow.
          * @throws unspecified any exception thrown by arb::set_precision().
          */
-        arb(const std::string &str, long prec = arb::get_default_precision())
+        explicit arb(const std::string &str, long prec = arb::get_default_precision())
         {
             // Try to parse an mpfr from the input string.
             mpfr_raii m(prec);
