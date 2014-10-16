@@ -187,9 +187,9 @@ BOOST_AUTO_TEST_CASE(arb_string_ctor_test)
     // Tests with limited exponent range to check error handling. Here we are assuming the default precision
     // is 53 bit (double precision).
     raii_expo_set es(-1022,1023);
-    // This should generate an underflow error when setting the midpoint,
-    // as 2**-1022 ~ 2.23E-308.
-    BOOST_CHECK_THROW(arb{"1E-309"},std::underflow_error);
+    // This should generate an underflow when setting the midpoint,
+    // as 2**-1022 ~ 2.23E-308. Check the radius is not zero.
+    BOOST_CHECK(!::mag_is_zero(arb_radref(arb{"1E-309"}.get_arb_t())));
     // This is a bit higher than halfway between 0 and 2**-1022. The midpoint setting
     // will be ok (it will set to 2**-1022 rounding upwards), but the radius calculation
     // will result in an underflow error.
