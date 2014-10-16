@@ -761,6 +761,7 @@ class arb: private detail::base_arb<>
                     ::mpfr_clear_underflow();
                     throw std::underflow_error("underflow in the calculation of the radius");
                 }
+                // NOTE: nothing throws after this.
                 // Construct an empty instance and set the midpoint.
                 ::arb_init(&m_arb);
                 ::arf_set_mpfr(arb_midref(&m_arb),m);
