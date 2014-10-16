@@ -36,7 +36,7 @@ if(BUILD_TESTS)
     message(STATUS "FLINT library is: ${FLINT_LIBRARIES}")
     # NOTE: arb looks for flint.h without prefix, but we look for
     # the include dir as $INCLUDE_DIR/flint/flint.h.
-    include_directories(${FLINT_INCLUDE_DIR}/flint)
+    include_directories(${FLINT_INCLUDE_DIR})
     # MPFR.
     find_package(MPFR REQUIRED)
     message(STATUS "MPFR library found.")
