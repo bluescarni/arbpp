@@ -61,3 +61,6 @@ if(BUILD_TESTS)
     )
     add_subdirectory("${CMAKE_SOURCE_DIR}/tests")
 endif()
+
+# Install the headers.
+install(FILES src/arbpp.hpp DESTINATION include/arbpp)
