@@ -94,6 +94,12 @@ BOOST_AUTO_TEST_CASE(arb_ctor_assignment_test)
     BOOST_CHECK_EQUAL((arb{-42,arb::get_default_precision() - 1}.get_midpoint()),-42.);
     BOOST_CHECK_EQUAL((arb{-42,arb::get_default_precision() - 1}.get_radius()),0);
     BOOST_CHECK_EQUAL((arb{-42,arb::get_default_precision() - 1}.get_precision()),arb::get_default_precision() - 1);
+    // Check setting to a big integer.
+    if (std::numeric_limits<long>::digits > 60) {
+        auto big_int = static_cast<long>(((1ll << 60) + 1));
+        BOOST_CHECK(!::mag_is_zero(arb_radref(arb{big_int}.get_arb_t())));
+        BOOST_CHECK(::mag_is_zero(arb_radref(arb(big_int,70).get_arb_t())));
+    }
     // Copy assignment.
     arb a5;
     a5 = a4;
@@ -128,6 +134,14 @@ BOOST_AUTO_TEST_CASE(arb_ctor_assignment_test)
     BOOST_CHECK(::arf_is_one(arb_midref(a1.get_arb_t())));
     BOOST_CHECK(::mag_is_zero(arb_radref(a1.get_arb_t())));
     BOOST_CHECK_EQUAL(a1.get_precision(),53);
+    // Check that when using the generic assignment to a large integer
+    // we perform the proper rounding and radius setting. Default precision
+    // is 53, so 2**60 + 1 cannot be represented exactly and the rounding to
+    // 53 bits will introduce a nonzero radius.
+    if (std::numeric_limits<long>::digits > 60) {
+        a1 = static_cast<long>(((1ll << 60) + 1));
+        BOOST_CHECK(!::mag_is_zero(arb_radref(a1.get_arb_t())));
+    }
 }
 
 struct raii_expo_set
@@ -234,6 +248,7 @@ BOOST_AUTO_TEST_CASE(arb_precision_test)
     BOOST_CHECK_THROW(a0.set_precision(-1),std::invalid_argument);
     BOOST_CHECK_EQUAL(a0.get_precision(),30);
     BOOST_CHECK_EQUAL(a0.get_midpoint(),1.);
+    // Check that when we init with low precision we get a nonzero radius.
     arb a1{1073741824l + 1};
     BOOST_CHECK_EQUAL(a1.get_radius(),0.);
     a1.set_precision(16);

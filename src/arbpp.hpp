@@ -817,6 +817,8 @@ class arb: private detail::base_arb<>
         {
             m_prec = get_default_precision();
             construct(x);
+            // Round-set self.
+            ::arb_set_round(&m_arb,&m_arb,m_prec);
             return *this;
         }
         /// Add error.
