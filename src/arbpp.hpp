@@ -139,19 +139,19 @@ struct mpfr_raii
 
 /// Real number represented as a floating-point ball.
 /**
- * \section interop Interoperability with fundamental types
+ * ## Interoperability with fundamental types ##
  * 
  * Interoperability with the following types is provided:
  * - \p char, <tt>signed char</tt>, \p short, \p int, \p long and unsigned counterparts,
  * - \p float and \p double.
  * 
- * \section exception_safety Exception safety guarantee
+ * ## Exception safety guarantee ##
  * 
  * This class provides the strong exception safety guarantee for all operations.
  * In case of memory allocation errors by
  * lower-level libraries (e.g., GMP), the program will terminate.
  * 
- * \section move_semantics Move semantics
+ * ## Move semantics ##
  *
  * Move construction and move assignment will leave the moved-from object in an
  * unspecified but valid state.
