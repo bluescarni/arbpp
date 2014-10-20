@@ -19,7 +19,6 @@ endif()
 option(BUILD_TESTS "Build test set." OFF)
 
 # Compiler setup.
-
 if(BUILD_TESTS)
     # Setup compiler.
     include(ArbppCompilerLinkerSettings)
@@ -35,7 +34,8 @@ if(BUILD_TESTS)
     message(STATUS "FLINT include dir is: ${FLINT_INCLUDE_DIR}")
     message(STATUS "FLINT library is: ${FLINT_LIBRARIES}")
     # NOTE: arb looks for flint.h without prefix, but we look for
-    # the include dir as $INCLUDE_DIR/flint/flint.h.
+    # the include dir as $INCLUDE_DIR/flint/flint.h. Include both paths.
+    include_directories(${FLINT_INCLUDE_DIR})
     include_directories(${FLINT_INCLUDE_DIR}/flint)
     # MPFR.
     find_package(MPFR REQUIRED)
