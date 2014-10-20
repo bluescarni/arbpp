@@ -756,17 +756,17 @@ class arb: private detail::base_arb<>
                 // NOTE: nothing throws after this.
                 // Construct an empty instance and set the midpoint.
                 ::arb_init(&m_arb);
-                ::arf_set_mpfr(arb_midref(&m_arb),m);
+                ::arf_set_mpfr(arb_midref((&m_arb)),m);
                 // Set the radius via a temporary fmpr.
                 fmpr_raii f;
                 ::fmpr_set_mpfr(f,tmp1);
-                ::mag_set_fmpr(arb_radref(&m_arb),f);
+                ::mag_set_fmpr(arb_radref((&m_arb)),f);
             } else {
                 // Just construct empty instance and set the midpoint.
                 // NOTE: we need to repeat these two lines here for exception safety (instead
                 // of sharing them outside the if block).
                 ::arb_init(&m_arb);
-                ::arf_set_mpfr(arb_midref(&m_arb),m);
+                ::arf_set_mpfr(arb_midref((&m_arb)),m);
             }
         }
         /// Destructor.
@@ -913,13 +913,19 @@ class arb: private detail::base_arb<>
          */
         friend std::ostream &operator<<(std::ostream &os, const arb &a)
         {
-            os << '(';
-            // First print the arf.
-            print_arf(os,arb_midref(&a.m_arb),a.m_prec);
-            os << " +/- ";
-            // Now print the mag.
-            print_mag(os,arb_radref(&a.m_arb),a.m_prec);
-            os << ')';
+            if (::mag_is_zero(arb_radref((&a.m_arb)))) {
+                // Print only the arf.
+                print_arf(os,arb_midref((&a.m_arb)),a.m_prec);
+            } else {
+                os << '(';
+                // First print the arf.
+                print_arf(os,arb_midref((&a.m_arb)),a.m_prec);
+                os << " +/- ";
+                // Now print the mag.
+                // NOTE: the mag has a fixed-size mantissa of 30 bits.
+                print_mag(os,arb_radref((&a.m_arb)),30);
+                os << ')';
+            }
             return os;
         }
         /// Midpoint getter.
@@ -929,7 +935,7 @@ class arb: private detail::base_arb<>
          */
         double get_midpoint() const
         {
-            return ::arf_get_d(arb_midref(&m_arb),ARF_RND_DOWN);
+            return ::arf_get_d(arb_midref((&m_arb)),ARF_RND_DOWN);
         }
         /// Radius getter.
         /**
@@ -939,7 +945,7 @@ class arb: private detail::base_arb<>
         double get_radius() const
         {
             fmpr_raii tmp;
-            ::mag_get_fmpr(tmp,arb_radref(&m_arb));
+            ::mag_get_fmpr(tmp,arb_radref((&m_arb)));
             return ::fmpr_get_d(tmp,FMPR_RND_UP);
         }
         /// Identity operator.
