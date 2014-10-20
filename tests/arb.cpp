@@ -234,6 +234,10 @@ BOOST_AUTO_TEST_CASE(arb_precision_test)
     BOOST_CHECK_THROW(a0.set_precision(-1),std::invalid_argument);
     BOOST_CHECK_EQUAL(a0.get_precision(),30);
     BOOST_CHECK_EQUAL(a0.get_midpoint(),1.);
+    arb a1{1073741824l + 1};
+    BOOST_CHECK_EQUAL(a1.get_radius(),0.);
+    a1.set_precision(16);
+    BOOST_CHECK(a1.get_radius() != 0.);
 }
 
 BOOST_AUTO_TEST_CASE(arb_get_arb_t_test)

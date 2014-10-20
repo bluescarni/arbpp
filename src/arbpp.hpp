@@ -610,6 +610,18 @@ class arb: private detail::base_arb<>
             ::arb_inv(&retval.m_arb,&retval.m_arb,retval.m_prec);
             return retval;
         }
+        // Implementation of precision value setter with checking.
+        void set_prec_value(long prec)
+        {
+            // NOTE: this precision is to be used within mpfr routines as well, so check that
+            // the value we are setting is not outside the mpfr bounds.
+            // The mpfr headers say that mpfr_prec_t is always a signed int,
+            // so there is no danger here in comparing to long.
+            if (prec < 1 || prec < MPFR_PREC_MIN || prec > MPFR_PREC_MAX) {
+                throw std::invalid_argument("invalid precision value");
+            }
+            m_prec = prec;
+        }
         // Enabler for the generic ctor.
         template <typename T>
         using generic_enabler = typename std::enable_if<is_interoperable<T>::value,int>::type;
@@ -653,23 +665,7 @@ class arb: private detail::base_arb<>
         /// Generic constructor.
         /**
          * \note
-         * This constructor is enabled only if \p T is an \ref interop "interoperable type".
-         * 
-         * Construction from an interoperable type is always exact. The precision
-         * will be set to the default value.
-         * 
-         * @param[in] x construction argument.
-         */
-        template <typename T, generic_enabler<T> = 0>
-        explicit arb(const T &x) : m_prec(get_default_precision())
-        {
-            ::arb_init(&m_arb);
-            construct(x);
-        }
-        /// Generic constructor with precision.
-        /**
-         * \note
-         * This constructor is enabled only if \p T is an \ref interop "interoperable type".
+         * This constructor is enabled only if \p T is an interoperable type.
          * 
          * This constructor will first initialise \p this to \p x, and then it will round \p this
          * to the precision \p prec. The precision of \p this will also be set to \p prec.
@@ -680,11 +676,11 @@ class arb: private detail::base_arb<>
          * @throws unspecified any exception thrown by arb::set_precision().
          */
         template <typename T, generic_enabler<T> = 0>
-        explicit arb(const T &x, long prec)
+        explicit arb(const T &x, long prec = arb::get_default_precision())
         {
-            // Set the precision value, with error checking.
-            set_precision(prec);
-            // Construct as usual.
+            // Set the value of the prec member before doing anything, for exception safety.
+            set_prec_value(prec);
+            // Construct the instance.
             ::arb_init(&m_arb);
             construct(x);
             // Round-set self.
@@ -725,7 +721,7 @@ class arb: private detail::base_arb<>
                 throw std::invalid_argument("invalid string input");
             }
             // Set precision.
-            set_precision(prec);
+            set_prec_value(prec);
             // NOTE: here we could have non-finite number in the following cases:
             // - the passed string was already representing a non-finite ("inf", "nan", etc.),
             // - the passed string represents a number which gets rounded to +-inf.
@@ -808,7 +804,7 @@ class arb: private detail::base_arb<>
         /// Generic assignment.
         /**
          * \note
-         * This assignment operator is enabled only if \p T is an \ref interop "interoperable type".
+         * This assignment operator is enabled only if \p T is an interoperable type.
          * 
          * The operation is equivalent to an assignment from an arbpp::arb object constructed from \p x.
          * 
@@ -859,6 +855,8 @@ class arb: private detail::base_arb<>
                 throw std::invalid_argument("invalid precision value");
             }
             m_prec = prec;
+            // Self-set with rounding.
+            ::arb_set_round(&m_arb,&m_arb,m_prec);
         }
         /// Precision getter.
         /**
@@ -953,7 +951,7 @@ class arb: private detail::base_arb<>
         /// In-place addition.
         /**
          * \note
-         * This operator is enabled only if \p T is an \ref interop "interoperable type"
+         * This operator is enabled only if \p T is an interoperable type
          * or arbpp::arb.
          * 
          * This method will set \p this to <tt>this + x</tt>. In case \p T is arbpp::arb, then
@@ -974,8 +972,8 @@ class arb: private detail::base_arb<>
         /**
          * \note
          * This template operator is enabled only if either:
-         * - \p T is arbpp::arb and \p U is an \ref interop "interoperable type",
-         * - \p U is arbpp::arb and \p T is an \ref interop "interoperable type",
+         * - \p T is arbpp::arb and \p U is an interoperable type,
+         * - \p U is arbpp::arb and \p T is an interoperable type,
          * - both \p T and \p U are arbpp::arb.
          * 
          * This method will compute <tt>a + b</tt> and return it as an arbpp::arb. In case \p T and \p U are both
@@ -1014,7 +1012,7 @@ class arb: private detail::base_arb<>
         /// In-place subtraction.
         /**
          * \note
-         * This operator is enabled only if \p T is an \ref interop "interoperable type"
+         * This operator is enabled only if \p T is an interoperable type
          * or arbpp::arb.
          * 
          * This method will set \p this to <tt>this - x</tt>. In case \p T is arbpp::arb, then
@@ -1035,8 +1033,8 @@ class arb: private detail::base_arb<>
         /**
          * \note
          * This template operator is enabled only if either:
-         * - \p T is arbpp::arb and \p U is an \ref interop "interoperable type",
-         * - \p U is arbpp::arb and \p T is an \ref interop "interoperable type",
+         * - \p T is arbpp::arb and \p U is an interoperable type,
+         * - \p U is arbpp::arb and \p T is an interoperable type,
          * - both \p T and \p U are arbpp::arb.
          * 
          * This method will compute <tt>a - b</tt> and return it as an arbpp::arb. In case \p T and \p U are both
@@ -1057,7 +1055,7 @@ class arb: private detail::base_arb<>
         /// In-place multiplication.
         /**
          * \note
-         * This operator is enabled only if \p T is an \ref interop "interoperable type"
+         * This operator is enabled only if \p T is an interoperable type
          * or arbpp::arb.
          * 
          * This method will set \p this to <tt>this * x</tt>. In case \p T is arbpp::arb, then
@@ -1078,8 +1076,8 @@ class arb: private detail::base_arb<>
         /**
          * \note
          * This template operator is enabled only if either:
-         * - \p T is arbpp::arb and \p U is an \ref interop "interoperable type",
-         * - \p U is arbpp::arb and \p T is an \ref interop "interoperable type",
+         * - \p T is arbpp::arb and \p U is an interoperable type,
+         * - \p U is arbpp::arb and \p T is an interoperable type,
          * - both \p T and \p U are arbpp::arb.
          * 
          * This method will compute <tt>a * b</tt> and return it as an arbpp::arb. In case \p T and \p U are both
@@ -1100,7 +1098,7 @@ class arb: private detail::base_arb<>
         /// In-place division.
         /**
          * \note
-         * This operator is enabled only if \p T is an \ref interop "interoperable type"
+         * This operator is enabled only if \p T is an interoperable type
          * or arbpp::arb.
          * 
          * This method will set \p this to <tt>this / x</tt>. In case \p T is arbpp::arb, then
@@ -1121,8 +1119,8 @@ class arb: private detail::base_arb<>
         /**
          * \note
          * This template operator is enabled only if either:
-         * - \p T is arbpp::arb and \p U is an \ref interop "interoperable type",
-         * - \p U is arbpp::arb and \p T is an \ref interop "interoperable type",
+         * - \p T is arbpp::arb and \p U is an interoperable type,
+         * - \p U is arbpp::arb and \p T is an interoperable type,
          * - both \p T and \p U are arbpp::arb.
          * 
          * This method will compute <tt>a / b</tt> and return it as an arbpp::arb. In case \p T and \p U are both
